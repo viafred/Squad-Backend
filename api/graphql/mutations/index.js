@@ -1,7 +1,15 @@
 const GraphQL = require('graphql')
-const { GraphQLObjectType, GraphQLNonNull, GraphQLString, GraphQLID } = GraphQL
+const { 
+    GraphQLObjectType, 
+    GraphQLNonNull, 
+    GraphQLString, 
+    GraphQLID, 
+    GraphQLInt,
+    GraphQLScalarType } = GraphQL
 
 const { UserType } = require('../types')
+
+// const GraphQLDate = require("graphql-iso-date");
 
 const createUser = {
     type: UserType,
@@ -14,12 +22,32 @@ const createUser = {
         },
         email: {
             type: new GraphQLNonNull(GraphQLString)
+        },
+        photoUrl: {
+            type: GraphQLString
+        },
+        role: {
+            type: GraphQLString
+        },
+        gender: {
+            type: new GraphQLNonNull(GraphQLString)
+        },
+        age: {
+            type: new GraphQLNonNull(GraphQLInt)
+        },
+        dob: {
+            type: new GraphQLObjectType(Object)
         }
     },
     resolve: (root, {
         firstName,
         lastName,
-        email
+        email,
+        photoUrl,
+        role,
+        gender,
+        age,
+        dob
     }) => {
         return new Promise((resolve, reject) => {
             /*database.run('INSERT INTO contacts (firstName, lastName, email) VALUES (?,?,?);', [firstName, lastName, email], (err) => {
