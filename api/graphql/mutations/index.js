@@ -1,15 +1,11 @@
-const GraphQL = require('graphql')
+const GraphQL = require('graphql');
 const { 
-    GraphQLObjectType, 
     GraphQLNonNull, 
     GraphQLString, 
     GraphQLID, 
-    GraphQLInt,
-    GraphQLScalarType } = GraphQL
+    GraphQLInt } = GraphQL
 
 const { UserType } = require('../types')
-
-// const GraphQLDate = require("graphql-iso-date");
 
 const createUser = {
     type: UserType,
@@ -27,7 +23,7 @@ const createUser = {
             type: GraphQLString
         },
         role: {
-            type: GraphQLString
+            type: new GraphQLNonNull(GraphQLString)
         },
         gender: {
             type: new GraphQLNonNull(GraphQLString)
@@ -35,8 +31,26 @@ const createUser = {
         age: {
             type: new GraphQLNonNull(GraphQLInt)
         },
-        dob: {
-            type: new GraphQLObjectType(Object)
+        dob: { 
+            type: GraphQLString
+        },
+        location: {
+            type: GraphQLString
+        },
+        hometown: {
+            type: new GraphQLNonNull(GraphQLString)
+        },
+        orientation: {
+            type: GraphQLString
+        },
+        education: {
+            type: GraphQLString
+        },
+        work: {
+            type: GraphQLString
+        },
+        createdAt: {
+            type: GraphQLString
         }
     },
     resolve: (root, {
@@ -47,7 +61,13 @@ const createUser = {
         role,
         gender,
         age,
-        dob
+        dob,
+        location,
+        hometown,
+        orientation,
+        education,
+        work,
+        createdAt
     }) => {
         return new Promise((resolve, reject) => {
             /*database.run('INSERT INTO contacts (firstName, lastName, email) VALUES (?,?,?);', [firstName, lastName, email], (err) => {
@@ -85,13 +105,17 @@ const updateUser = {
         },
         email: {
             type: new GraphQLNonNull(GraphQLString)
+        },
+        updatedAt: {
+            type: GraphQLString
         }
     },
     resolve: (root, {
         id,
         firstName,
         lastName,
-        email
+        email,
+        updatedAt
     }) => {
         return new Promise((resolve, reject) => {
             /*database.run('UPDATE contacts SET firstName = (?), lastName = (?), email = (?) WHERE id = (?);', [firstName, lastName, email, id], (err) => {
