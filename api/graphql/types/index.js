@@ -6,34 +6,33 @@ const {
     GraphQLInt } = GraphQL
 
 const GraphQLDate = require("graphql-iso-date");
-const { GraphQLDateTime } = GraphQLDate
 
 const UserType = new GraphQLObjectType({
     name: "User",
     fields: {
         id: { type: GraphQLID },
-        firstname: { type: GraphQLString },
-        lastname: { type: GraphQLString },
+        firstName: { type: GraphQLString },
+        lastName: { type: GraphQLString },
         email: { type: GraphQLString },
         photoUrl: { type: GraphQLString },
         role: { type: GraphQLString },
         gender: { type: GraphQLString },
         age: { type: GraphQLInt },
-        // dob: { type: GraphQLString },
+        dob: { type: GraphQLDate },
         location: { type: GraphQLString },
         hometown: { type: GraphQLString },
         height: { type: GraphQLString },
         orientation: { type: GraphQLString },
         education: { type: GraphQLString },
         work: { type: GraphQLString },
-        createdAt: { 
-            type: GraphQLDateTime, 
-            resolve: () => new Date() 
-        },
-        updatedAt: { 
-            type: GraphQLDateTime, 
-            resolve: () => new Date()
-        }
+        // createdAt: { 
+        //     type: GraphQLDateTime, 
+        //     resolve: () => new Date() 
+        // },
+        // updatedAt: { 
+        //     type: GraphQLDateTime, 
+        //     resolve: () => new Date()
+        // }
     }
 });
 
