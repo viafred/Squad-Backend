@@ -10,3 +10,7 @@
 .env.production.local
 
 .package-lock.json
+.gitsecret/keys/random_seed
+!*.secret
+
+api/config/service-account.json
