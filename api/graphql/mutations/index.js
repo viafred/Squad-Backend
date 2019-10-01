@@ -1,6 +1,7 @@
 const GraphQL = require('graphql');
 const { 
     GraphQLNonNull, 
+    GraphQLList,
     GraphQLString, 
     GraphQLID, 
     GraphQLInt } = GraphQL
@@ -14,6 +15,9 @@ const createUser = {
             type: new GraphQLNonNull(GraphQLString)
         },
         lastName: {
+            type: new GraphQLNonNull(GraphQLString)
+        },
+        displayName: {
             type: new GraphQLNonNull(GraphQLString)
         },
         email: {
@@ -51,7 +55,10 @@ const createUser = {
         },
         createdAt: {
             type: GraphQLString
-        }
+        },
+        updatedAt: {
+            type: GraphQLString
+        }, 
     },
     resolve: (root, {
         firstName,
