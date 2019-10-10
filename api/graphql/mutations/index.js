@@ -1,7 +1,7 @@
 const GraphQL = require('graphql')
 const { GraphQLObjectType, GraphQLNonNull, GraphQLString, GraphQLID } = GraphQL
 
-const { UserType } = require('../types')
+const { UserType } = require('../schema')
 
 const createUser = {
     type: UserType,

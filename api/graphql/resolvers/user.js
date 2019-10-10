@@ -1,10 +1,5 @@
-const GraphQL = require('graphql')
-
 const firebaseAdmin = require('firebase-admin');
 const database = firebaseAdmin.firestore();
-const settings = {timestampsInSnapshots: true};
-database.settings(settings);
-
 
 const users = (root, args, context, info) => {
     return new Promise((resolve, reject) => {
