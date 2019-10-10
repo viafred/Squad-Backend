@@ -39,6 +39,7 @@ const server = new ApolloServer({
     modules: [
         require('./api/graphql/modules/user'),
         require('./api/graphql/modules/brand'),
+        require('./api/graphql/modules/category'),
     ]
 });
 

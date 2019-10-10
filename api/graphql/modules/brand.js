@@ -5,17 +5,20 @@ const brandResolvers = require('../resolvers/brand')
 
 const typeDefs = gql`
     extend type Query {
-        brands: [Brand]
+        brands: [Brand],
+        getBrandsAndCategories: BrandAndCategory
     }
     
     type Brand {
         id: ID!
-        guid: String
-        title: String
-        description: String
-        about: String
+        name: String
+        verified: Boolean
     }
    
+   type BrandAndCategory {
+        brands: [Brand],
+        categories: [Category],
+   }
 `
 
 const resolvers = {
