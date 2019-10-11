@@ -5,7 +5,7 @@ const categoryResolvers = require('../resolvers/category')
 
 const typeDefs = gql`
     extend type Query {
-        categories: [Category]
+        getCategories: [Category]
     }
     
     type Category {
