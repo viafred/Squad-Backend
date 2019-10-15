@@ -14,13 +14,14 @@ const typeDefs = gql`
         id: ID!
         displayName: String
         email: String
+        hasUploads: Boolean
+        photoURL: String
     }
     
     input UserInput {
         id: ID!
         displayName: String
-        email: String,
-        brands: [BrandInput]
+        email: String
     }
     
     extend type Mutation {
