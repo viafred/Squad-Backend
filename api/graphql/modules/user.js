@@ -7,29 +7,34 @@ const typeDefs = gql`
     extend type Query {
         user(id: ID!): User
         users: [User],
+        getSpotlightMembers: [UploadPhoto]
     }
     
     type User {
         id: ID!
         displayName: String
-        email: String,
-        brands: [Brand]
+        email: String
     }
     
-    type Mutation {
-        updateUser(id: ID!, displayName: String!, email:String!): User!
+    input UserInput {
+        id: ID!
+        displayName: String
+        email: String,
+        brands: [BrandInput]
+    }
+    
+    extend type Mutation {
+        updateUser(user: UserInput): User!
     }
 `
 
 const resolvers = {
     Query: {
-        ...userResolvers
+        ...userResolvers.queries
     },
 
     Mutation: {
-        updateUser: (parent, args) => {
-            console.log(args);
-        }
+        ...userResolvers.mutations
     }
 }
 

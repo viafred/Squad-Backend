@@ -1,8 +1,11 @@
+require('events').EventEmitter.defaultMaxListeners = Infinity
+
 const express = require('express');
 const { ApolloServer } = require('apollo-server-express');
 
 const app = express();
 const cors = require('cors');
+
 const firebaseAdmin = require('firebase-admin');
 const serviceAccount = require('./api/config/service-account.json'); /*-> This refers to the google cloud service account, [Learn How to Get it From](https://firebase.google.com/docs/admin/setup)*/
 
@@ -17,6 +20,7 @@ firebaseAdmin.initializeApp({
 const database = firebaseAdmin.firestore();
 const settings = {timestampsInSnapshots: true};
 database.settings(settings);
+
 
 /*
   The above code initializes firebase-admin globally
@@ -40,6 +44,7 @@ const server = new ApolloServer({
         require('./api/graphql/modules/user'),
         require('./api/graphql/modules/brand'),
         require('./api/graphql/modules/category'),
+        require('./api/graphql/modules/uploadPhoto'),
     ]
 });
 

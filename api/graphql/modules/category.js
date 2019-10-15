@@ -8,9 +8,16 @@ const typeDefs = gql`
         getCategories: [Category]
     }
     
+    input CategoryInput {
+        id: ID
+        name: String,
+        verified: Boolean
+    }
+    
     type Category {
-        id: ID!
-        name: String
+        id: ID
+        name: String,
+        verified: Boolean
     }
    
 `

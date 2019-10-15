@@ -10,12 +10,18 @@ const typeDefs = gql`
     }
     
     type Brand {
-        id: ID!
+        id: ID
         name: String
         verified: Boolean
     }
    
-   type BrandAndCategory {
+    input BrandInput {
+        id: ID
+        name: String
+        verified: Boolean
+    }
+    
+    type BrandAndCategory {
         brands: [Brand],
         categories: [Category],
    }

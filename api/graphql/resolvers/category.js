@@ -8,7 +8,7 @@ const getCategories = (root, args, context, info) => {
         collection.then( collection => {
             let categories = [];
             if (collection.empty) {
-                reject('No matching documents.');
+                resolve([]);
             }
 
             collection.forEach( doc => {
