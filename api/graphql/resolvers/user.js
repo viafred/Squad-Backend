@@ -49,6 +49,7 @@ const getSpotlightMembers = async (root, args, context, info) => {
     let collection = await database.collection('uploads')
         .where("likes", ">=", 0)
         .orderBy("likes", "desc")
+        .orderBy("createdAt", "desc")
         .limit(4)
         .get();
 

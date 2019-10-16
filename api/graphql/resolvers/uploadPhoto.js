@@ -45,6 +45,9 @@ const addUploadedPhoto =  (parent, args) => {
             categoryRef = await database.collection('categories').add({name: args.uploadPhoto.category.name, verified: false});
         }
 
+        console.log(brandRef);
+        console.log(categoryRef);
+
         const photo = {
             brand: brandRef,
             category: categoryRef,
