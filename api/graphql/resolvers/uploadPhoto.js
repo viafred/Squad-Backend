@@ -59,8 +59,6 @@ const addUploadedPhoto =  (parent, args) => {
         let uploadPhoto = database.collection('uploads').add(photo).then(async ref => {
             const userSnapshot =  await userRef.get();
             const userData = userSnapshot.data();
-            const userUploads = userData.uploads;
-            userUploads.push(ref);
 
             userRef.set({...userData, hasUploads: true });
 
