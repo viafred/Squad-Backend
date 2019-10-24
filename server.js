@@ -38,10 +38,12 @@ app.use((req, res, next) => {
 });
 
 app.use(cors());
+app.use(express.urlencoded({ extended: false }));
 
 const server = new ApolloServer({
     modules: [
         require('./api/graphql/modules/user'),
+        require('./api/graphql/modules/customer'),
         require('./api/graphql/modules/brand'),
         require('./api/graphql/modules/category'),
         require('./api/graphql/modules/uploadPhoto'),
