@@ -24,6 +24,30 @@ const getUploadedPhotos = (root, args, context, info) => {
     });
 }
 
+const getUserUploads = (root, args, context, info) => {
+    return new Promise((resolve, reject) => {
+        let userRef = database.collection('users').doc(args.userId);
+        let collection = database.collection('uploads').where('member', '==', userRef).get();
+
+        collection.then( collection => {
+            let uploads = [];
+            if (collection.empty) {
+                resolve([]);
+            }
+
+            collection.forEach( doc => {
+                let data = doc.data();
+                data.id = doc.id;
+                uploads.push(data);
+            });
+
+            resolve(uploads)
+        }).catch(err => {
+            reject(err);
+        });
+    });
+}
+
 const addUploadedPhoto =  (parent, args) => {
     return new Promise(async (resolve, reject) => {
         let userRef = database.doc(`users/${args.uploadPhoto.userId}`);
@@ -71,7 +95,8 @@ const addUploadedPhoto =  (parent, args) => {
 
 module.exports = {
     queries: {
-        getUploadedPhotos
+        getUploadedPhotos,
+        getUserUploads
     },
     mutations: {
         addUploadedPhoto
