@@ -24,28 +24,27 @@ const getUploadedPhotos = (root, args, context, info) => {
     });
 }
 
-const getUserUploads = (root, args, context, info) => {
-    return new Promise((resolve, reject) => {
-        let userRef = database.collection('users').doc(args.userId);
-        let collection = database.collection('uploads').where('member', '==', userRef).get();
+const getUserUploads =  async (root, args, context, info) => {
+    const userRef = database.collection('users').doc(args.userId);
+    const collection = await database.collection('uploads').where('member', '==', userRef).get();
 
-        collection.then( collection => {
-            let uploads = [];
-            if (collection.empty) {
-                resolve([]);
-            }
+    let uploads = [];
+    for (const doc of collection.docs) {
+        let data = doc.data();
+        data.id = doc.id;
 
-            collection.forEach( doc => {
-                let data = doc.data();
-                data.id = doc.id;
-                uploads.push(data);
-            });
+        let brandRef = await database.collection('brands').doc(data.brand.id).get();
+        data.brand = brandRef.data();
+        data.brand.id = data.brand.id;
 
-            resolve(uploads)
-        }).catch(err => {
-            reject(err);
-        });
-    });
+        let categoryRef = await database.collection('categories').doc(data.category.id).get();
+        data.category = categoryRef.data();
+        data.category.id = data.category.id;
+
+        uploads.push(data);
+    }
+
+    return uploads;
 }
 
 const addUploadedPhoto =  (parent, args) => {
