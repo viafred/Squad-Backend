@@ -82,7 +82,28 @@ const getSpotlightMembers = async (root, args, context, info) => {
     return uploads;
 }
 
+const updateUser =  (parent, args) => {
+    return new Promise(async (resolve, reject) => {
 
+        let userInput = JSON.parse(JSON.stringify(args.user));
+        userInput.dob = new Date(userInput.dob);
+        userInput.updatedAt = new Date();
+
+        let user = database.collection('users').doc(args.id).set(userInput, {merge: true});
+        user = database.collection('users').doc(args.id).get();
+        user.then(doc => {
+            if (!doc.exists) {
+                reject('User does not exists');
+            } else {
+                let data = doc.data();
+                data.id = doc.id;
+                resolve(data)
+            }
+        }).catch(err => {
+            reject(err);
+        });
+    });
+}
 
 
 module.exports = {
@@ -92,6 +113,6 @@ module.exports = {
         getSpotlightMembers
     },
     mutations: {
-
+        updateUser
     }
 }

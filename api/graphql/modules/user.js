@@ -19,13 +19,31 @@ const typeDefs = gql`
     }
     
     input UserInput {
-        id: ID!
+        id: String
         displayName: String
         email: String
+        photoURL: String
+        dob: String
+        gender: String
+        locationCity: String
+        locationState: String
+        hometownCity: String
+        hometownState: String
+        ethnicity: String
+        orientation: String
+        education: String
+        height: String
+        facebook: String
+        instagram: String
+        snapchat: String
+        twitter: String
+        linkedin: String
+        work: String
+        age: String
     }
     
     extend type Mutation {
-        updateUser(user: UserInput): User!
+        updateUser(id:ID, user: UserInput): User!
     }
 `
 
