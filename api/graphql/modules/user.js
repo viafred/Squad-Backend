@@ -40,6 +40,7 @@ const typeDefs = gql`
         linkedin: String
         work: String
         age: String
+        role: String
     }
     
     extend type Mutation {
