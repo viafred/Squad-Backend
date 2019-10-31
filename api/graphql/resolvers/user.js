@@ -86,7 +86,9 @@ const updateUser =  (parent, args) => {
     return new Promise(async (resolve, reject) => {
 
         let userInput = JSON.parse(JSON.stringify(args.user));
-        userInput.dob = new Date(userInput.dob);
+        if ( userInput.dob ){
+            userInput.dob = new Date(userInput.dob);
+        }
         userInput.updatedAt = new Date();
 
         let user = database.collection('users').doc(args.id).set(userInput, {merge: true});
