@@ -39,6 +39,7 @@ const typeDefs = gql`
     }
     
     input CustomerInput {
+        id: String
         companyName: String
         companyAddress1: String
         companyAddress2: String
@@ -48,6 +49,7 @@ const typeDefs = gql`
         companyWebsite: String
         companyBrand: String
         companyLogo: String
+        companyBanner: String
         firstName: String
         lastName: String
         title: String
@@ -63,6 +65,7 @@ const typeDefs = gql`
         billingCity: String
         billingState: String
         billingZipcode: String
+        finishSteps: Boolean
     }
     
     extend type Mutation {

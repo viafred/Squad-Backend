@@ -92,10 +92,50 @@ const addUploadedPhoto =  (parent, args) => {
     });
 }
 
+const getBrandUploads =  async (root, args, context, info) => {
+    if ( !args.brandId ){
+        return []
+    }
+
+    const userRef = database.collection('brands').doc(args.brandId);
+    const collection = await database.collection('uploads').where('brand', '==', userRef).get();
+
+    let uploads = [];
+    for (const doc of collection.docs) {
+        let data = doc.data();
+        data.id = doc.id;
+
+        let brandRef = await database.collection('brands').doc(data.brand.id).get();
+        data.brand = brandRef.data();
+        data.brand.id = data.brand.id;
+
+        let categoryRef = await database.collection('categories').doc(data.category.id).get();
+        data.category = categoryRef.data();
+        data.category.id = data.category.id;
+
+        const userLikes = await database.collection('uploads').doc(doc.id).collection('userLikes').get();
+
+        let userLikesList = [];
+        for (const likeDoc of userLikes.docs) {
+            let likeData = likeDoc.data();
+            likeData.id = likeDoc.id;
+
+            userLikesList.push(likeData);
+        }
+
+        data.userLikes = userLikesList;
+
+        uploads.push(data);
+    }
+
+    return uploads;
+}
+
 module.exports = {
     queries: {
         getUploadedPhotos,
-        getUserUploads
+        getUserUploads,
+        getBrandUploads
     },
     mutations: {
         addUploadedPhoto

@@ -7,6 +7,19 @@ const typeDefs = gql`
     extend type Query {
         getUploadedPhotos: [UploadPhoto],
         getUserUploads(userId: String): [UploadPhoto]
+        getBrandUploads(brandId: String): [UploadPhoto]
+    }
+    
+    type UploadPhotoLike {
+        id: ID!
+        member: User
+        like: Boolean
+    }
+    
+    type UploadPhotoLikeInput {
+        id: ID
+        member: User
+        like: Boolean
     }
     
     type UploadPhoto {
@@ -17,6 +30,7 @@ const typeDefs = gql`
         productUrl: String!
         likes: Int
         member: User
+        userLikes: [UploadPhotoLike]
     }
   
     input UploadPhotoInput {
