@@ -36,7 +36,33 @@ const getBrandsAndCategories =  async (root, args, context, info) => {
     }
 }
 
+const subscribeToBrand =  (parent, args) => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            let brandRef = database.doc(`brands/${args.id}`);
+
+            const brandSubscriptionsRef = database.collection('users').doc(args.userId).collection('brandSubscriptions').where('brand', '==', brandRef);
+            const brandSubscriptions = await brandSubscriptionsRef.get();
+            if ( brandSubscriptions.docs.length == 1 ){
+                let brandSubscription = brandSubscriptions.docs[0];
+                database.collection('users').doc(args.userId).collection('brandSubscriptions').doc(brandSubscription.id).delete();
+            } else {
+                await database.collection('users').doc(args.userId).collection('brandSubscriptions').add({brand: brandRef});
+            }
+
+            resolve(true);
+        } catch (e) {
+            reject(e)
+        }
+    })
+}
+
 module.exports = {
-    getBrands,
-    getBrandsAndCategories
+    queries: {
+        getBrands,
+        getBrandsAndCategories
+    },
+    mutations: {
+        subscribeToBrand
+    }
 }

@@ -47,6 +47,78 @@ const getUserUploads =  async (root, args, context, info) => {
     return uploads;
 }
 
+const getBrandUploads =  async (root, args, context, info) => {
+    if ( !args.brandId ){
+        return []
+    }
+
+    const brandRef = database.collection('brands').doc(args.brandId);
+
+    const customerRef = await database.collection('customers').where('brand', '==', brandRef).get();
+    let companyBanner = null;
+    let companyLogo = null;
+    if ( customerRef.docs.length > 0 ){
+        let customer = customerRef.docs[0].data();
+        companyBanner = customer.companyBanner;
+        companyLogo = customer.companyLogo;
+    }
+    let brand = await brandRef.get();
+    brand = brand.data();
+    brand.id = brandRef.id;
+    brand.banner = companyBanner;
+    brand.logo = companyLogo;
+
+    const brandSubscriptionsRef = database.collection('users').doc(args.userId).collection('brandSubscriptions').where('brand', '==', brandRef);
+    const brandSubscriptions = await brandSubscriptionsRef.get();
+    let isSubscribed = brandSubscriptions && brandSubscriptions.docs.length == 1 ? true : false;
+
+    const collection = await database.collection('uploads').where('brand', '==', brandRef).get();
+
+    let uploads = [];
+    for (const doc of collection.docs) {
+        let data = doc.data();
+        data.id = doc.id;
+
+        let brandRef = await database.collection('brands').doc(data.brand.id).get();
+        data.brand = brandRef.data();
+        data.brand.id = brandRef.id;
+
+        let categoryRef = await database.collection('categories').doc(data.category.id).get();
+        data.category = categoryRef.data();
+        data.category.id = categoryRef.id;
+
+        let member = await database.doc(`users/${data.member.id}`).get();
+        data.member = member.data();
+        data.member.id = member.id;
+
+        const userLikes = await database.collection('uploads').doc(doc.id).collection('userLikes').get();
+
+        let userLikesList = [];
+        for (const likeDoc of userLikes.docs) {
+            let likeData = likeDoc.data();
+            likeData.id = likeDoc.id;
+
+            userLikesList.push(likeData);
+        }
+
+        data.userLikes = userLikesList;
+
+        uploads.push(data);
+    }
+
+    let returnData = {};
+    returnData.isSubscribed = isSubscribed;
+    returnData.brand = brand;
+    returnData.uploads = uploads;
+
+    return returnData;
+
+}
+
+
+
+/* MUTATIONS */
+
 const addUploadedPhoto =  (parent, args) => {
     return new Promise(async (resolve, reject) => {
         let userRef = database.doc(`users/${args.uploadPhoto.userId}`);
@@ -62,7 +134,7 @@ const addUploadedPhoto =  (parent, args) => {
             brandRef = await database.collection('brands').add({name: args.uploadPhoto.brand.name, verified: false});
         }
 
-        if (args.uploadPhoto.brand.id){
+        if (args.uploadPhoto.category.id){
             categoryRef = database.doc(`categories/${args.uploadPhoto.category.id}`);
         } else {
             categoryRef = await database.collection('categories').add({name: args.uploadPhoto.category.name, verified: false});
@@ -92,44 +164,30 @@ const addUploadedPhoto =  (parent, args) => {
     });
 }
 
-const getBrandUploads =  async (root, args, context, info) => {
-    if ( !args.brandId ){
-        return []
-    }
+const likeUploadedPhoto =  (parent, args) => {
+    return new Promise(async (resolve, reject) => {
 
-    const userRef = database.collection('brands').doc(args.brandId);
-    const collection = await database.collection('uploads').where('brand', '==', userRef).get();
+        try {
+            let userRef = database.doc(`users/${args.userId}`);
 
-    let uploads = [];
-    for (const doc of collection.docs) {
-        let data = doc.data();
-        data.id = doc.id;
+            const userLikesRef = database.collection('uploads').doc(args.id).collection('userLikes').where('member', '==', userRef);
+            const userLikes = await userLikesRef.get();
+            if ( userLikes.docs.length == 1 ){
+                let userLike = userLikes.docs[0];
+                let userLikeData = userLike.data();
+                userLikeData.like = !userLikeData.like;
+                database.collection('uploads').doc(args.id).collection('userLikes').doc(userLike.id).set(userLikeData, {merge: true});
+            } else {
+                await database.collection('uploads').doc(args.id).collection('userLikes').add({like: true, member: userRef});
+            }
 
-        let brandRef = await database.collection('brands').doc(data.brand.id).get();
-        data.brand = brandRef.data();
-        data.brand.id = data.brand.id;
-
-        let categoryRef = await database.collection('categories').doc(data.category.id).get();
-        data.category = categoryRef.data();
-        data.category.id = data.category.id;
-
-        const userLikes = await database.collection('uploads').doc(doc.id).collection('userLikes').get();
-
-        let userLikesList = [];
-        for (const likeDoc of userLikes.docs) {
-            let likeData = likeDoc.data();
-            likeData.id = likeDoc.id;
-
-            userLikesList.push(likeData);
+            resolve(true);
+        } catch (e) {
+            reject(e)
         }
-
-        data.userLikes = userLikesList;
-
-        uploads.push(data);
-    }
-
-    return uploads;
+    })
 }
+
 
 module.exports = {
     queries: {
@@ -138,6 +196,7 @@ module.exports = {
         getBrandUploads
     },
     mutations: {
-        addUploadedPhoto
+        addUploadedPhoto,
+        likeUploadedPhoto
     }
 }

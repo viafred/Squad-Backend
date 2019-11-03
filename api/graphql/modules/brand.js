@@ -13,6 +13,8 @@ const typeDefs = gql`
         id: ID
         name: String
         verified: Boolean
+        banner: String
+        logo: String
     }
    
     input BrandInput {
@@ -24,16 +26,20 @@ const typeDefs = gql`
     type BrandAndCategory {
         brands: [Brand],
         categories: [Category],
-   }
+    }
+    
+    extend type Mutation {
+        subscribeToBrand(id: ID, userId: ID): Boolean
+    }
 `
 
 const resolvers = {
     Query: {
-        ...brandResolvers
+        ...brandResolvers.queries
     },
 
     Mutation: {
-
+        ...brandResolvers.mutations
     }
 }
 

@@ -7,7 +7,7 @@ const typeDefs = gql`
     extend type Query {
         getUploadedPhotos: [UploadPhoto],
         getUserUploads(userId: String): [UploadPhoto]
-        getBrandUploads(brandId: String): [UploadPhoto]
+        getBrandUploads(brandId: String, userId: String): BrandUpload
     }
     
     type UploadPhotoLike {
@@ -32,6 +32,12 @@ const typeDefs = gql`
         member: User
         userLikes: [UploadPhotoLike]
     }
+    
+    type BrandUpload {
+        brand: Brand,
+        isSubscribed: Boolean,
+        uploads: [UploadPhoto],
+    }
   
     input UploadPhotoInput {
         brand: BrandInput!
@@ -43,6 +49,7 @@ const typeDefs = gql`
 
     extend type Mutation {
         addUploadedPhoto(uploadPhoto: UploadPhotoInput!): UploadPhoto
+        likeUploadedPhoto(id: ID, userId: ID): Boolean
     }
 `
 
