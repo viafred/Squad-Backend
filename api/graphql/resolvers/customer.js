@@ -26,21 +26,25 @@ const customers = (root, args, context, info) => {
     });
 }
 
-const customer = (root, { id }, context, info) => {
-    return new Promise((resolve, reject) => {
-        let customer = database.collection('customers').doc(id).get();
-        customer.then(doc => {
-                if (!doc.exists) {
-                    reject('Customer does not exists');
-                } else {
-                    let data = doc.data();
-                    data.id = doc.id;
-                    resolve(data)
-                }
-            })
-            .catch(err => {
-                reject(err);
-            });
+const getCustomer = (root, { id }, context, info) => {
+    return new Promise(async (resolve, reject) => {
+        let customer = await database.collection('customers').doc(id).get();
+        if ( customer.exists ){
+            let customerData = customer.data();
+            let brandRef = await database.collection('brands').doc(customerData.brand.id).get();
+            let brandData = brandRef.data();
+            brandData.id = brandRef.id;
+
+            let result = {
+                id: customer.id,
+                ...customerData,
+                brand: brandData
+            };
+
+            resolve(result);
+        }
+
+        reject('Customer does not exists');
     });
 }
 
@@ -86,7 +90,7 @@ const updateCustomer =  (parent, args) => {
 module.exports = {
     queries: {
         customers,
-        customer
+        getCustomer
     },
     mutations: {
         updateCustomer

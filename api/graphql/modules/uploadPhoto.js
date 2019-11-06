@@ -8,6 +8,7 @@ const typeDefs = gql`
         getUploadedPhotos: [UploadPhoto],
         getUserUploads(userId: String): [UploadPhoto]
         getBrandUploads(brandId: String, userId: String): BrandUpload
+        algoliaUploadsSearch(searchParam: String): [AlgoliaUploadPhoto]
     }
     
     type UploadPhotoLike {
@@ -31,6 +32,28 @@ const typeDefs = gql`
         likes: Int
         member: User
         userLikes: [UploadPhotoLike]
+    }
+    
+    type AlgoliaUser {
+        photoURL: String
+        role: String
+        email: String
+        displayName: String
+        hasUploads: Boolean
+    }
+    
+    type AlgoliaBrand {
+        name: String
+    }
+    
+    type AlgoliaUploadPhoto {
+        uploadId: ID
+        brand: AlgoliaBrand
+        category: AlgoliaBrand
+        productName: String
+        productUrl: String
+        likes: Int
+        member: AlgoliaUser
     }
     
     type BrandUpload {

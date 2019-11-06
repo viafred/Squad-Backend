@@ -1,5 +1,9 @@
+const algoliasearch = require('algoliasearch');
 const firebaseAdmin = require('firebase-admin');
 const database = firebaseAdmin.firestore();
+
+const client = algoliasearch('2M731BETMO', '237132a7980c930cb0ae32641d2aa5b2');
+const index = client.initIndex(process.env.ALGOLIA_UPLOADS_INDEX);
 
 const getUploadedPhotos = (root, args, context, info) => {
     return new Promise((resolve, reject) => {
@@ -115,7 +119,29 @@ const getBrandUploads =  async (root, args, context, info) => {
 
 }
 
+const algoliaUploadsSearch = (root, args, context, info) => {
+    return new Promise((resolve, reject) => {
+        index.search({ query: args.searchParam },
+            (err, { hits } = {}) => {
+                if (err) reject(err);
 
+                let results = [];
+                for ( let doc of hits ){
+                    let result = {
+                        id: doc.uploadId,
+                        ...doc,
+                        brand: {name: doc.brand},
+                        category: {name: doc.category}
+                    }
+
+                    results.push(result);
+                }
+
+                resolve(results);
+            }
+        );
+    });
+}
 
 /* MUTATIONS */
 
@@ -189,14 +215,17 @@ const likeUploadedPhoto =  (parent, args) => {
 }
 
 
+
 module.exports = {
     queries: {
         getUploadedPhotos,
         getUserUploads,
-        getBrandUploads
+        getBrandUploads,
+        algoliaUploadsSearch
     },
     mutations: {
         addUploadedPhoto,
-        likeUploadedPhoto
+        likeUploadedPhoto,
+
     }
 }

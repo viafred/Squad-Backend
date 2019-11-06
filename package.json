@@ -12,6 +12,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "algoliasearch": "^3.35.1",
     "apollo-server": "^2.9.5",
     "apollo-server-express": "^2.9.5",
     "body-parser": "^1.19.0",
