@@ -36,6 +36,44 @@ const getBrandsAndCategories =  async (root, args, context, info) => {
     }
 }
 
+const getSubscribedBrands =  async (root, args, context, info) => {
+    const brandSubscriptions = await database.doc(`users/${args.userId}`).collection('brandSubscriptions').get();
+    if ( brandSubscriptions.docs.length > 0 ){
+        let brands = [];
+        for ( let brandSubscriptionRef of brandSubscriptions.docs ){
+            let brand = {};
+
+            let brandSubscription = brandSubscriptionRef.data();
+            brandSubscription.id = brandSubscriptionRef.id;
+            let brandRef = database.collection('brands').doc(brandSubscription.brand.id);
+            let brandDoc = await brandRef.get();
+
+            brand = brandDoc.data();
+            brand.id = brandDoc.id;
+
+            const customerRef = await database.collection('customers').where('brand', '==', brandRef).get();
+            let companyBanner = null;
+            let companyLogo = null;
+            if ( customerRef.docs.length > 0 ){
+                let customer = customerRef.docs[0].data();
+                companyBanner = customer.companyBanner;
+                companyLogo = customer.companyLogo;
+            }
+
+            brand.banner = companyBanner;
+            brand.logo = companyLogo;
+
+            brands.push(brand);
+        }
+
+        return brands;
+    }
+
+    return [];
+}
+
+
+/* MUTATIONS */
 const subscribeToBrand =  (parent, args) => {
     return new Promise(async (resolve, reject) => {
         try {
@@ -60,7 +98,8 @@ const subscribeToBrand =  (parent, args) => {
 module.exports = {
     queries: {
         getBrands,
-        getBrandsAndCategories
+        getBrandsAndCategories,
+        getSubscribedBrands
     },
     mutations: {
         subscribeToBrand

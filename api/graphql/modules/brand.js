@@ -7,6 +7,7 @@ const typeDefs = gql`
     extend type Query {
         getBrands: [Brand],
         getBrandsAndCategories: BrandAndCategory
+        getSubscribedBrands(userId: ID):[Brand]
     }
     
     type Brand {
