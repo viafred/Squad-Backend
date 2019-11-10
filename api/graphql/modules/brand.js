@@ -11,7 +11,7 @@ const typeDefs = gql`
     }
     
     type Brand {
-        id: ID
+        _id: ID
         name: String
         verified: Boolean
         banner: String

@@ -1,110 +1,82 @@
+const { dbClient, dbName } = require('../../config/mongo');
+const ObjectId = require('mongodb').ObjectId;
 
-const firebaseAdmin = require('firebase-admin');
-const database = firebaseAdmin.firestore();
+const users = async (root, args, context, info) => {
+    const usersRef = dbClient.db(dbName).collection("users");
+    const users = await usersRef.find({}).toArray();
 
-const users = (root, args, context, info) => {
-    return new Promise((resolve, reject) => {
-        let collection = database.collection('users').get();
-
-        collection.then( collection => {
-                let users = [];
-                if (collection.empty) {
-                    resolve([]);
-                }
-
-                collection.forEach( doc => {
-                    let data = doc.data();
-                    data.id = doc.id;
-                    users.push(data);
-                });
-
-                resolve(users)
-            })
-            .catch(err => {
-                reject(err);
-            });
-    });
+    return users;
 }
 
-const user = (root, { id }, context, info) => {
-    return new Promise((resolve, reject) => {
-        let user = database.collection('users').doc(id).get();
-        user.then(doc => {
-                if (!doc.exists) {
-                    reject('User does not exists');
-                } else {
-                    let data = doc.data();
-                    data.id = doc.id;
-                    resolve(data)
-                }
-            })
-            .catch(err => {
-                reject(err);
-            });
-    });
+const user = async (root, { id }, context, info) => {
+    const usersRef = dbClient.db(dbName).collection("users");
+    const user = await usersRef.findOne({_id: new ObjectId(id)});
+
+    return user;
 }
 
+const getUserByFirebaseId = async (root, { firebaseId }, context, info) => {
+    const usersRef = dbClient.db(dbName).collection("users");
+    const user = await usersRef.findOne({firebaseId: new ObjectId(firebaseId)});
+
+    return user;
+}
 
 const getSpotlightMembers = async (root, args, context, info) => {
-    let collection = await database.collection('uploads')
-        .where("likes", ">=", 0)
-        .orderBy("likes", "desc")
-        .orderBy("createdAt", "desc")
-        .limit(4)
-        .get();
+    const uploads = await dbClient.db(dbName).collection("uploads").aggregate([
+        {
+            $lookup:{
+                from: "users",
+                localField : "memberId",
+                foreignField : "_id",
+                as : "member"
+            }
+        },
+        {
+            $lookup:{
+                from: "brands",
+                localField : "brandId",
+                foreignField : "_id",
+                as : "brand"
+            }
+        },
+        {
+            $lookup:{
+                from: "categories",
+                localField : "categoryId",
+                foreignField : "_id",
+                as : "category"
+            }
+        },
+        { $sort : { likes : -1 } }
+    ]).limit(4).toArray();
 
-    if (collection.empty) {
-        return [];
-    }
-
-    let uploads = [];
-    for ( let upload of collection.docs ){
-        let data = upload.data();
-        data.id = upload.id;
-
-        let brand = await database.doc(`brands/${data.brand.id}`).get();
-        let category = await database.doc(`categories/${data.category.id}`).get();
-        let member = await database.doc(`users/${data.member.id}`).get();
-
-        data.brand = brand.data();
-        data.brand.id = brand.id;
-
-        data.category = category.data();
-        data.category.id = category.id;
-
-        data.member = member.data();
-        data.member.id = member.id;
-
-        uploads.push(data);
-
+    for ( let upload of uploads ){
+        upload.brand = upload.brand[0];
+        upload.member = upload.member[0];
+        upload.category = upload.category[0];
     }
 
     return uploads;
 }
 
-const updateUser =  (parent, args) => {
-    return new Promise(async (resolve, reject) => {
 
-        let userInput = JSON.parse(JSON.stringify(args.user));
-        if ( userInput.dob ){
-            userInput.dob = new Date(userInput.dob);
+/* MUTATIONS */
+const updateUser = async (parent, args) => {
+    let userInput = JSON.parse(JSON.stringify(args.user));
+    if ( userInput.dob ){
+        userInput.dob = new Date(userInput.dob);
+    }
+
+    await dbClient.db(dbName).collection('users').updateOne(
+        { _id: new ObjectId(args.id) },
+        {
+            $set: userInput,
+            $currentDate: { updatedAt: true }
         }
-        userInput.updatedAt = new Date();
+    );
 
-        let user = database.collection('users').doc(args.id).set(userInput, {merge: true});
-        user = database.collection('users').doc(args.id).get();
-        user.then(doc => {
-            if (!doc.exists) {
-                reject('User does not exists');
-            } else {
-                let data = doc.data();
-                data.id = doc.id;
-                resolve(data)
-            }
-        }).catch(err => {
-            reject(err);
-        });
-    });
+    return { _id: new ObjectId(args.id) };
 }
 
 
@@ -112,7 +84,8 @@ module.exports = {
     queries: {
         users,
         user,
-        getSpotlightMembers
+        getSpotlightMembers,
+        getUserByFirebaseId
     },
     mutations: {
         updateUser

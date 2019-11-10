@@ -10,7 +10,7 @@ const typeDefs = gql`
     }
     
     type Customer {
-        id: ID
+        _id: ID
         user: User
         companyName: String
         companyAddress1: String

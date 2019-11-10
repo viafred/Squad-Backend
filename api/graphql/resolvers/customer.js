@@ -1,89 +1,78 @@
+const { dbClient, dbName } = require('../../config/mongo');
+const ObjectId = require('mongodb').ObjectId;
 
-const firebaseAdmin = require('firebase-admin');
-const database = firebaseAdmin.firestore();
+const customers = async (root, args, context, info) => {
+    const customersRef = dbClient.db(dbName).collection("customers");
+    const customers = await customersRef.find({}).toArray();
 
-const customers = (root, args, context, info) => {
-    return new Promise((resolve, reject) => {
-        let collection = database.collection('customers').get();
-
-        collection.then( collection => {
-                let customers = [];
-                if (collection.empty) {
-                    resolve([]);
-                }
-
-                collection.forEach( doc => {
-                    let data = doc.data();
-                    data.id = doc.id;
-                    customers.push(data);
-                });
-
-                resolve(customers)
-            })
-            .catch(err => {
-                reject(err);
-            });
-    });
+    return customers;
 }
 
-const getCustomer = (root, { id }, context, info) => {
-    return new Promise(async (resolve, reject) => {
-        let customer = await database.collection('customers').doc(id).get();
-        if ( customer.exists ){
-            let customerData = customer.data();
-            let brandRef = await database.collection('brands').doc(customerData.brand.id).get();
-            let brandData = brandRef.data();
-            brandData.id = brandRef.id;
-
-            let result = {
-                id: customer.id,
-                ...customerData,
-                brand: brandData
-            };
-
-            resolve(result);
-        }
-
-        reject('Customer does not exists');
-    });
-}
-
-
-const updateCustomer =  (parent, args) => {
-    return new Promise(async (resolve, reject) => {
-
-        let customerInput = JSON.parse(JSON.stringify(args.customer));
-
-        let brandCollection = await database.collection('brands').where("name", "==", customerInput.companyBrand).get();
-        let brandRef = null;
-        if ( !brandCollection.empty ){
-            brandCollection.forEach(async doc =>  {
-                let brandData = doc.data();
-                if ( brandData.name === customerInput.companyBrand ){
-                    brandRef = database.collection('brands').doc(doc.id);
-                    await brandRef.set({verified: true}, {merge: true});
-                }
-            })
-        } else {
-            brandRef = await database.collection('brands').add({name: customerInput.companyBrand, verified: true});
-        }
-
-        customerInput.brand = brandRef;
-        customerInput.finishSteps = true;
-        let customer = database.collection('customers').doc(args.id).set(customerInput, {merge: true});
-        customer = database.collection('customers').doc(args.id).get();
-        customer.then(doc => {
-            if (!doc.exists) {
-                reject('Customer does not exists');
-            } else {
-                let data = doc.data();
-                data.id = doc.id;
-                resolve(data)
+const getCustomer = async(root, { id }, context, info) => {
+    const customersRef = await dbClient.db(dbName).collection("customers").aggregate([
+        {
+            $lookup:{
+                from: "brands",
+                localField : "brandId",
+                foreignField : "_id",
+                as : "brand"
             }
-        }).catch(err => {
-                reject(err);
-            });
-    });
+        },
+        { $match : { _id : new ObjectId(id) } }
+    ]).limit(1).toArray();
+
+    let customer = customersRef[0];
+    customer.brand = customer.brand[0];
+
+    return customer;
+}
+
+
+const updateCustomer =  async (parent, args) => {
+    let customerInput = JSON.parse(JSON.stringify(args.customer));
+    let _id = new ObjectId(args.id);
+
+
+    let brand = await dbClient.db(dbName).collection('brands').aggregate(
+        [
+            {
+                $project:
+                    {
+                        name: { $toLower: "$name" },
+                    }
+            },
+            { $match : { name : customerInput.companyBrand.toLowerCase() } }
+        ]
+    ).toArray();
+
+    if (brand.length > 0){
+        customerInput.brandId = new ObjectId(brand[0]._id);
+
+        await dbClient.db(dbName).collection('brands').updateOne(
+            { _id: new ObjectId(brand[0]._id) },
+            {
+                $set: {verified: true},
+                $currentDate: { updatedAt: true }
+            }
+        );
+    } else {
+        brand = await dbClient.db(dbName).collection('brands').insertOne({name: customerInput.companyBrand, verified: true});
+
+        customerInput.brandId = brand.insertedId;
+    }
+
+    customerInput.finishSteps = true;
+
+
+    await dbClient.db(dbName).collection('customers').updateOne(
+        { _id: new ObjectId(_id) },
+        {
+            $set: customerInput,
+            $currentDate: { updatedAt: true }
+        }
+    );
+
+    return { _id: new ObjectId(args.id) };
 }
 
 

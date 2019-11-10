@@ -8,14 +8,15 @@ const typeDefs = gql`
         user(id: ID!): User
         users: [User],
         getSpotlightMembers: [UploadPhoto]
+        getUserByFirebaseId(firebaseId: ID!): User
     }
     
     type User {
-        id: ID!
+        _id: ID
         displayName: String
         email: String
         hasUploads: Boolean
-        photoURL: String
+        pictureUrl: String
     }
     
     input UserInput {

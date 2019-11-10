@@ -3,6 +3,8 @@ require('events').EventEmitter.defaultMaxListeners = Infinity
 const express = require('express');
 const { ApolloServer } = require('apollo-server-express');
 
+const { dbClient } = require('./api/config/mongo');
+
 const app = express();
 const cors = require('cors');
 
@@ -53,5 +55,5 @@ const server = new ApolloServer({
 server.applyMiddleware({ app, path: '/api/graphql' });
 
 app.listen({ port: process.env.PORT }, () => {
-    console.log('Apollo Server on http://localhost:8000/api/graphql');
+    dbClient.connect().then((client) => { console.log('Apollo Server on http://localhost:8000/api/graphql'); console.log('MongoDB Connected'); }).catch(err => { console.log(err) });
 });

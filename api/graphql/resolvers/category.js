@@ -1,27 +1,11 @@
-const firebaseAdmin = require('firebase-admin');
-const database = firebaseAdmin.firestore();
+const { dbClient, dbName } = require('../../config/mongo');
+const ObjectId = require('mongodb').ObjectId;
 
-const getCategories = (root, args, context, info) => {
-    return new Promise((resolve, reject) => {
-        let collection = database.collection('categories').get();
+const getCategories = async (root, args, context, info) => {
+    const categoriesRef = dbClient.db(dbName).collection("categories");
+    const categories = await categoriesRef.find({}).toArray();
 
-        collection.then( collection => {
-            let categories = [];
-            if (collection.empty) {
-                resolve([]);
-            }
-
-            collection.forEach( doc => {
-                let data = doc.data();
-                data.id = doc.id;
-                categories.push(data);
-            });
-
-            resolve(categories)
-        }).catch(err => {
-            reject(err);
-        });
-    });
+    return categories;
 }
 
 

@@ -8,7 +8,7 @@ const typeDefs = gql`
         getUploadedPhotos: [UploadPhoto],
         getUserUploads(userId: String): [UploadPhoto]
         getBrandUploads(brandId: String, userId: String): BrandUpload
-        algoliaUploadsSearch(searchParam: String): [AlgoliaUploadPhoto]
+        uploadsSearch(searchParam: String): [SearchUploadPhoto]
     }
     
     type UploadPhotoLike {
@@ -24,17 +24,25 @@ const typeDefs = gql`
     }
     
     type UploadPhoto {
-        id: ID!
+        _id: ID!
         brand: Brand!
         category: Category!
         productName: String!
         productUrl: String!
         likes: Int
         member: User
-        userLikes: [UploadPhotoLike]
+        userLikes: [ID]
     }
     
-    type AlgoliaUser {
+    input UploadPhotoInput {
+        brand: BrandInput!
+        category: CategoryInput!
+        productName: String!
+        productUrl: String!
+        userId: ID!
+    }
+    
+    type SearchUser {
         photoURL: String
         role: String
         email: String
@@ -42,32 +50,24 @@ const typeDefs = gql`
         hasUploads: Boolean
     }
     
-    type AlgoliaBrand {
+    type SearchBrand {
         name: String
     }
     
-    type AlgoliaUploadPhoto {
-        uploadId: ID
-        brand: AlgoliaBrand
-        category: AlgoliaBrand
+    type SearchUploadPhoto {
+        _id: ID
+        brand: SearchBrand
+        category: SearchBrand
         productName: String
         productUrl: String
-        likes: Int
-        member: AlgoliaUser
+        userLikes: [String]
+        member: SearchUser
     }
     
     type BrandUpload {
         brand: Brand,
         isSubscribed: Boolean,
         uploads: [UploadPhoto],
-    }
-  
-    input UploadPhotoInput {
-        brand: BrandInput!
-        category: CategoryInput!
-        productName: String!
-        productUrl: String!
-        userId: ID!
     }
 
     extend type Mutation {

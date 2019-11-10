@@ -1,3 +1,6 @@
+const { dbClient, dbName } = require('../../config/mongo');
+const ObjectId = require('mongodb').ObjectId;
+
 const algoliasearch = require('algoliasearch');
 const firebaseAdmin = require('firebase-admin');
 const database = firebaseAdmin.firestore();
@@ -5,47 +8,52 @@ const database = firebaseAdmin.firestore();
 const client = algoliasearch('2M731BETMO', '237132a7980c930cb0ae32641d2aa5b2');
 const index = client.initIndex(process.env.ALGOLIA_UPLOADS_INDEX);
 
-const getUploadedPhotos = (root, args, context, info) => {
-    return new Promise((resolve, reject) => {
-        let collection = database.collection('uploads').get();
+var _ = require('lodash');
 
-        collection.then( collection => {
-            let uploads = [];
-            if (collection.empty) {
-                reject('No matching documents.');
-            }
+const getUploadedPhotos = async (root, args, context, info) => {
+    const uploadedRef = dbClient.db(dbName).collection("uploads");
+    const uploads = await uploadedRef.find({}).toArray();
 
-            collection.forEach( doc => {
-                let data = doc.data();
-                data.id = doc.id;
-                uploads.push(data);
-            });
-
-            resolve(uploads)
-        }).catch(err => {
-                reject(err);
-            });
-    });
+    return uploads;
 }
 
 const getUserUploads =  async (root, args, context, info) => {
-    const userRef = database.collection('users').doc(args.userId);
-    const collection = await database.collection('uploads').where('member', '==', userRef).get();
+    if ( !args.userId ){
+        return []
+    }
 
-    let uploads = [];
-    for (const doc of collection.docs) {
-        let data = doc.data();
-        data.id = doc.id;
+    const uploads = await dbClient.db(dbName).collection("uploads").aggregate([
+        {
+            $lookup:{
+                from: "users",
+                localField : "memberId",
+                foreignField : "_id",
+                as : "member"
+            }
+        },
+        {
+            $lookup:{
+                from: "brands",
+                localField : "brandId",
+                foreignField : "_id",
+                as : "brand"
+            }
+        },
+        {
+            $lookup:{
+                from: "categories",
+                localField : "categoryId",
+                foreignField : "_id",
+                as : "category"
+            }
+        },
+        { $match : { memberId : new ObjectId(args.userId) } }
+    ]).toArray();
 
-        let brandRef = await database.collection('brands').doc(data.brand.id).get();
-        data.brand = brandRef.data();
-        data.brand.id = data.brand.id;
-
-        let categoryRef = await database.collection('categories').doc(data.category.id).get();
-        data.category = categoryRef.data();
-        data.category.id = data.category.id;
-
-        uploads.push(data);
+    for ( let upload of uploads ){
+        upload.brand = upload.brand[0];
+        upload.member = upload.member[0];
+        upload.category = upload.category[0];
     }
 
     return uploads;
@@ -56,62 +64,51 @@ const getBrandUploads =  async (root, args, context, info) => {
         return []
     }
 
-    const brandRef = database.collection('brands').doc(args.brandId);
+    const uploads = await dbClient.db(dbName).collection("uploads").aggregate([
+        {
+            $lookup:{
+                from: "users",
+                localField : "memberId",
+                foreignField : "_id",
+                as : "member"
+            }
+        },
+        {
+            $lookup:{
+                from: "brands",
+                localField : "brandId",
+                foreignField : "_id",
+                as : "brand",
+            }
+        },
+        {
+            $lookup:{
+                from: "categories",
+                localField : "categoryId",
+                foreignField : "_id",
+                as : "category"
+            }
+        },
+        { $match : { brandId : new ObjectId(args.brandId) } }
+    ]).toArray();
 
-    const customerRef = await database.collection('customers').where('brand', '==', brandRef).get();
-    let companyBanner = null;
-    let companyLogo = null;
-    if ( customerRef.docs.length > 0 ){
-        let customer = customerRef.docs[0].data();
-        companyBanner = customer.companyBanner;
-        companyLogo = customer.companyLogo;
+    const brandSubscriptions = await dbClient.db(dbName).collection("brand_subscriptions").findOne({brandId: new ObjectId(args.brandId), userId: new ObjectId(args.userId)})
+    const brand = await dbClient.db(dbName).collection("brands").findOne({_id: new ObjectId(args.brandId)});
+    const customer = await dbClient.db(dbName).collection("customers").findOne({brandId: new ObjectId(args.brandId)});
+
+    if ( customer ){
+        brand.banner = customer.companyBanner;
+        brand.logo = customer.companyLogo;
     }
-    let brand = await brandRef.get();
-    brand = brand.data();
-    brand.id = brandRef.id;
-    brand.banner = companyBanner;
-    brand.logo = companyLogo;
 
-    const brandSubscriptionsRef = database.collection('users').doc(args.userId).collection('brandSubscriptions').where('brand', '==', brandRef);
-    const brandSubscriptions = await brandSubscriptionsRef.get();
-    let isSubscribed = brandSubscriptions && brandSubscriptions.docs.length == 1 ? true : false;
-
-    const collection = await database.collection('uploads').where('brand', '==', brandRef).get();
-
-    let uploads = [];
-    for (const doc of collection.docs) {
-        let data = doc.data();
-        data.id = doc.id;
-
-        let brandRef = await database.collection('brands').doc(data.brand.id).get();
-        data.brand = brandRef.data();
-        data.brand.id = brandRef.id;
-
-        let categoryRef = await database.collection('categories').doc(data.category.id).get();
-        data.category = categoryRef.data();
-        data.category.id = categoryRef.id;
-
-        let member = await database.doc(`users/${data.member.id}`).get();
-        data.member = member.data();
-        data.member.id = member.id;
-
-        const userLikes = await database.collection('uploads').doc(doc.id).collection('userLikes').get();
-
-        let userLikesList = [];
-        for (const likeDoc of userLikes.docs) {
-            let likeData = likeDoc.data();
-            likeData.id = likeDoc.id;
-
-            userLikesList.push(likeData);
-        }
-
-        data.userLikes = userLikesList;
-
-        uploads.push(data);
+    for ( let upload of uploads ){
+        upload.brand = upload.brand[0];
+        upload.member = upload.member[0];
+        upload.category = upload.category[0];
     }
 
     let returnData = {};
-    returnData.isSubscribed = isSubscribed;
+    returnData.isSubscribed = brandSubscriptions != null;
     returnData.brand = brand;
     returnData.uploads = uploads;
 
@@ -119,99 +116,140 @@ const getBrandUploads =  async (root, args, context, info) => {
 
 }
 
-const algoliaUploadsSearch = (root, args, context, info) => {
-    return new Promise((resolve, reject) => {
-        index.search({ query: args.searchParam },
-            (err, { hits } = {}) => {
-                if (err) reject(err);
-
-                let results = [];
-                for ( let doc of hits ){
-                    let result = {
-                        id: doc.uploadId,
-                        ...doc,
-                        brand: {name: doc.brand},
-                        category: {name: doc.category}
-                    }
-
-                    results.push(result);
-                }
-
-                resolve(results);
+const uploadsSearch = async (root, args, context, info) => {
+    const uploads = await dbClient.db(dbName).collection("uploads").aggregate([
+        { $match : { $text: { $search: args.searchParam } } },
+        {
+            $lookup:{
+                from: "users",
+                localField : "memberId",
+                foreignField : "_id",
+                as : "member"
             }
-        );
-    });
+        },
+        {
+            $lookup:{
+                from: "brands",
+                localField : "brandId",
+                foreignField : "_id",
+                as : "brand",
+            }
+        },
+        {
+            $lookup:{
+                from: "categories",
+                localField : "categoryId",
+                foreignField : "_id",
+                as : "category"
+            }
+        },
+
+    ]).toArray();
+
+    for ( let upload of uploads ){
+        upload.brand = upload.brand[0];
+        upload.member = upload.member[0];
+        upload.category = upload.category[0];
+    }
+
+    return uploads;
 }
 
 /* MUTATIONS */
 
-const addUploadedPhoto =  (parent, args) => {
-    return new Promise(async (resolve, reject) => {
-        let userRef = database.doc(`users/${args.uploadPhoto.userId}`);
-
-        let brandRef = null;
-        let categoryRef = null;
-        let createdAt = new Date();
-        let updatedAt = new Date();
-
-        if (args.uploadPhoto.brand.id){
-            brandRef = database.doc(`brands/${args.uploadPhoto.brand.id}`);
-        } else {
-            brandRef = await database.collection('brands').add({name: args.uploadPhoto.brand.name, verified: false});
-        }
-
-        if (args.uploadPhoto.category.id){
-            categoryRef = database.doc(`categories/${args.uploadPhoto.category.id}`);
-        } else {
-            categoryRef = await database.collection('categories').add({name: args.uploadPhoto.category.name, verified: false});
-        }
-
-        const photo = {
-            brand: brandRef,
-            category: categoryRef,
-            member: userRef,
+const addUploadedPhoto =  async (parent, args) => {
+    try {
+        let photo = {
+            brandId: null,
+            categoryId: null,
+            memberId: new ObjectId(args.uploadPhoto.userId),
             productName: args.uploadPhoto.productName,
             productUrl: args.uploadPhoto.productUrl,
-            likes: 0,
-            createdAt: createdAt,
-            updatedAt: updatedAt
+            brandName: args.uploadPhoto.brand.name,
+            categoryName: args.uploadPhoto.category.name,
+            createdAt: new Date(),
+            updatedAt: new Date()
         };
 
-        let uploadPhoto = database.collection('uploads').add(photo).then(async ref => {
-            const userSnapshot =  await userRef.get();
-            const userData = userSnapshot.data();
+        //Brands
+        let brands = await dbClient.db(dbName).collection('brands').aggregate(
+            [
+                {
+                    $project:
+                        {
+                            name: { $toLower: "$name" },
+                        }
+                },
+                { $match : { name : args.uploadPhoto.brand.name.toLowerCase() } }
+            ]
+        ).toArray();
 
-            userRef.set({...userData, hasUploads: true });
+        if (brands.length > 0){
+            photo.brandId = new ObjectId(brands[0]._id);
+            await dbClient.db(dbName).collection('brands').updateOne(
+                { _id: new ObjectId(brands[0]._id) },
+                {
+                    $set: {verified: false, name: args.uploadPhoto.brand.name},
+                    $currentDate: { updatedAt: true }
+                }
+            );
+        } else {
+            let brand = await dbClient.db(dbName).collection('brands').insertOne(
+                { name: args.uploadPhoto.brand.name, verified: false, createdAt: new Date(), updatedAt: new Date() });
+            photo.brandId = brand.insertedId;
+        }
 
-            resolve(args.uploadPhoto)
-        }).catch(err => {
-            reject(err);
-        });
-    });
+        //Categories
+        let categories = await dbClient.db(dbName).collection('categories').aggregate(
+            [
+                {
+                    $project:
+                        {
+                            name: { $toLower: "$name" },
+                        }
+                },
+                { $match : { name : args.uploadPhoto.category.name.toLowerCase() } }
+            ]
+        ).toArray();
+
+        if (categories.length > 0){
+            photo.categoryId = new ObjectId(categories[0]._id);
+            await dbClient.db(dbName).collection('categories').updateOne(
+                { _id: new ObjectId(categories[0]._id) },
+                {
+                    $set: {verified: false, name: args.uploadPhoto.category.name},
+                    $currentDate: { updatedAt: true }
+                }
+            );
+        } else {
+            let category = await dbClient.db(dbName).collection('categories').insertOne(
+                {name: args.uploadPhoto.category.name, verified: false, createdAt: new Date(), updatedAt: new Date()} );
+            photo.categoryId = category.insertedId;
+        }
+
+        let upload = await dbClient.db(dbName).collection('uploads').insertOne(photo);
+
+        return {_id: upload.insertedId};
+    } catch (e) {
+        return e;
+    }
 }
 
-const likeUploadedPhoto =  (parent, args) => {
-    return new Promise(async (resolve, reject) => {
+const likeUploadedPhoto =  async (parent, args) => {
+    const upload = await dbClient.db(dbName).collection("uploads").findOne({_id: new ObjectId(args.id)});
+    if ( upload && upload.userLikes && _.find(upload.userLikes, new ObjectId(args.userId)) ){
+        await dbClient.db(dbName).collection("uploads").updateOne(
+            { _id: new ObjectId(args.id) },
+            { $pull: { userLikes: { $in: [ new ObjectId(args.userId) ] } }}
+        )
+    } else {
+        await dbClient.db(dbName).collection("uploads").updateOne(
+            { _id: new ObjectId(args.id) },
+            { $push: { userLikes: new ObjectId(args.userId) }}
+        )
+    }
 
-        try {
-            let userRef = database.doc(`users/${args.userId}`);
-
-            const userLikesRef = database.collection('uploads').doc(args.id).collection('userLikes').where('member', '==', userRef);
-            const userLikes = await userLikesRef.get();
-            if ( userLikes.docs.length == 1 ){
-                let userLike = userLikes.docs[0];
-                let userLikeData = userLike.data();
-                userLikeData.like = !userLikeData.like;
-                database.collection('uploads').doc(args.id).collection('userLikes').doc(userLike.id).set(userLikeData, {merge: true});
-            } else {
-                await database.collection('uploads').doc(args.id).collection('userLikes').add({like: true, member: userRef});
-            }
-
-            resolve(true);
-        } catch (e) {
-            reject(e)
-        }
-    })
+    return true;
 }
 
 
@@ -221,11 +259,10 @@ module.exports = {
         getUploadedPhotos,
         getUserUploads,
         getBrandUploads,
-        algoliaUploadsSearch
+        uploadsSearch
     },
     mutations: {
         addUploadedPhoto,
         likeUploadedPhoto,
-
     }
 }
