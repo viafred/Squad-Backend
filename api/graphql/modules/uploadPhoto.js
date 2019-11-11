@@ -43,7 +43,7 @@ const typeDefs = gql`
     }
     
     type SearchUser {
-        photoURL: String
+        pictureUrl: String
         role: String
         email: String
         displayName: String
