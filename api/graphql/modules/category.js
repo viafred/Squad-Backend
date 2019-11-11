@@ -9,7 +9,7 @@ const typeDefs = gql`
     }
     
     input CategoryInput {
-        id: ID
+        _id: ID
         name: String,
         verified: Boolean
     }

@@ -229,7 +229,7 @@ const addUploadedPhoto =  async (parent, args) => {
 
         let upload = await dbClient.db(dbName).collection('uploads').insertOne(photo);
 
-        return {_id: upload.insertedId};
+        return upload.insertedId.toString();
     } catch (e) {
         return e;
     }

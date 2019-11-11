@@ -71,7 +71,7 @@ const typeDefs = gql`
     }
 
     extend type Mutation {
-        addUploadedPhoto(uploadPhoto: UploadPhotoInput!): UploadPhoto
+        addUploadedPhoto(uploadPhoto: UploadPhotoInput!): String
         likeUploadedPhoto(id: ID, userId: ID): Boolean
     }
 `

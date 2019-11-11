@@ -19,7 +19,7 @@ const typeDefs = gql`
     }
    
     input BrandInput {
-        id: ID
+        _id: ID
         name: String
         verified: Boolean
     }
