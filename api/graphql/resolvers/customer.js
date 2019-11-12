@@ -8,8 +8,8 @@ const customers = async (root, args, context, info) => {
     return customers;
 }
 
-const getCustomer = async(root, { id }, context, info) => {
-    const customersRef = await dbClient.db(dbName).collection("customers").aggregate([
+const getCustomer = async(root, args, context, info) => {
+    const customers = await dbClient.db(dbName).collection("customers").aggregate([
         {
             $lookup:{
                 from: "brands",
@@ -18,10 +18,11 @@ const getCustomer = async(root, { id }, context, info) => {
                 as : "brand"
             }
         },
-        { $match : { _id : new ObjectId(id) } }
+        { $match : { _id : new ObjectId(args.id) } }
     ]).limit(1).toArray();
 
-    let customer = customersRef[0];
+
+    let customer = customers[0];
     customer.brand = customer.brand[0];
 
     return customer;
@@ -45,6 +46,8 @@ const updateCustomer =  async (parent, args) => {
         ]
     ).toArray();
 
+    console.log(brand);
+
     if (brand.length > 0){
         customerInput.brandId = new ObjectId(brand[0]._id);
 
@@ -63,7 +66,7 @@ const updateCustomer =  async (parent, args) => {
 
     customerInput.finishSteps = true;
 
-
+    delete customerInput._id;
     await dbClient.db(dbName).collection('customers').updateOne(
         { _id: new ObjectId(_id) },
         {

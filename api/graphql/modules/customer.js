@@ -5,7 +5,7 @@ const customerResolvers = require('../resolvers/customer')
 
 const typeDefs = gql`
     extend type Query {
-        getCustomer(id: ID!): Customer
+        getCustomer(id: String): Customer
         customers: [Customer]
     }
     
@@ -40,7 +40,7 @@ const typeDefs = gql`
     }
     
     input CustomerInput {
-        id: String
+        _id: String
         companyName: String
         companyAddress1: String
         companyAddress2: String
