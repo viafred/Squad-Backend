@@ -2,10 +2,47 @@ const { dbClient, dbName } = require('../../config/mongo');
 const ObjectId = require('mongodb').ObjectId;
 
 const categoryResolvers = require('../resolvers/category')
+const productResolvers = require('../resolvers/product')
 
 const getBrands = async (root, args, context, info) => {
     const brandsRef = dbClient.db(dbName).collection("brands");
-    const brands = await brandsRef.find({}).toArray();
+    let brands = [];
+    if ( args.brandIds ){
+        let brandIds = [];
+        for ( let brandId of args.brandIds ){
+            brandIds.push(new ObjectId(brandId));
+        }
+        brands = await brandsRef.aggregate([
+            {
+                $lookup:{
+                    from: 'customers',
+                    localField: '_id',
+                    foreignField: 'brandId',
+                    as: 'customer'
+                },
+            },
+            { $match : { _id: { $in: brandIds }, verified: true } }
+        ]).toArray();
+    } else {
+        brands = await brandsRef.aggregate([
+            {
+                $lookup:{
+                    from: 'customers',
+                    localField: '_id',
+                    foreignField: 'brandId',
+                    as: 'customer'
+                },
+            },
+            { $match : { verified: true } }
+        ]).toArray();
+    }
+
+    if ( brands.length > 0 ){
+        for ( let brand of brands ){
+            brand.banner = brand.customer && brand.customer.length > 0 ? brand.customer[0].companyBanner : '';
+            brand.logo = brand.customer && brand.customer.length > 0 ? brand.customer[0].companyLogo : '';
+        }
+    }
 
     return brands;
 }
@@ -17,6 +54,16 @@ const getBrandsAndCategories =  async (root, args, context, info) => {
     return {
         brands,
         categories
+    }
+}
+
+const getBrandsAndProducts =  async (root, args, context, info) => {
+    const brands = await getBrands(root, args, context, info);
+    const products = await productResolvers.queries.getProducts(root, args, context, info);
+
+    return {
+        brands,
+        products
     }
 }
 
@@ -59,6 +106,7 @@ module.exports = {
     queries: {
         getBrands,
         getBrandsAndCategories,
+        getBrandsAndProducts,
         getSubscribedBrands
     },
     mutations: {

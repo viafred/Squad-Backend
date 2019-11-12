@@ -5,8 +5,9 @@ const brandResolvers = require('../resolvers/brand')
 
 const typeDefs = gql`
     extend type Query {
-        getBrands: [Brand],
+        getBrands(brandIds:[String]): [Brand],
         getBrandsAndCategories: BrandAndCategory
+        getBrandsAndProducts(brandIds:[String], productIds: [String]): BrandAndProduct 
         getSubscribedBrands(userId: ID):[Brand]
     }
     
@@ -27,6 +28,11 @@ const typeDefs = gql`
     type BrandAndCategory {
         brands: [Brand],
         categories: [Category],
+    }
+    
+    type BrandAndProduct {
+        brands: [Brand],
+        products: [Product],
     }
     
     extend type Mutation {

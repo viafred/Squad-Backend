@@ -1,13 +1,6 @@
 const { dbClient, dbName } = require('../../config/mongo');
 const ObjectId = require('mongodb').ObjectId;
 
-const algoliasearch = require('algoliasearch');
-const firebaseAdmin = require('firebase-admin');
-const database = firebaseAdmin.firestore();
-
-const client = algoliasearch('2M731BETMO', '237132a7980c930cb0ae32641d2aa5b2');
-const index = client.initIndex(process.env.ALGOLIA_UPLOADS_INDEX);
-
 var _ = require('lodash');
 
 const getUploadedPhotos = async (root, args, context, info) => {

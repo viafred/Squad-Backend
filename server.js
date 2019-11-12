@@ -49,6 +49,7 @@ const server = new ApolloServer({
         require('./api/graphql/modules/brand'),
         require('./api/graphql/modules/category'),
         require('./api/graphql/modules/uploadPhoto'),
+        require('./api/graphql/modules/product')
     ]
 });
 
