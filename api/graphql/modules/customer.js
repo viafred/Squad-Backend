@@ -6,6 +6,9 @@ const customerResolvers = require('../resolvers/customer')
 const typeDefs = gql`
     extend type Query {
         getCustomer(id: String): Customer
+        getCustomerBrandsAndCategories(customerId: String): BrandAndCategory
+        getCustomerBrandsCategoriesProducts(customerId: String, brandIds:[String], categoryIds:[String], productIds: [String]): BrandCategoryProduct 
+        getCustomerProducts(customerId: String, brandIds:[String], categoryIds:[String], productIds: [String]): [Product]
         customers: [Customer]
     }
     

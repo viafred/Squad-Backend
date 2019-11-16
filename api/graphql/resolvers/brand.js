@@ -47,9 +47,47 @@ const getBrands = async (root, args, context, info) => {
     return brands;
 }
 
+const getCustomerBrands =  async (root, args, context, info) => {
+    let find = {};
+    let brands = [];
+
+    if ( args.brandIds ){
+        let brandIds = [];
+        for ( let brandId of args.brandIds ){
+            brandIds.push(new ObjectId(brandId));
+        }
+
+        find = { _id: { $in: brandIds } };
+    }
+
+    if ( args.customerId ){
+        find.customerId =  new ObjectId(args.customerId);
+    }
+
+    const brandsRef = dbClient.db(dbName).collection("customer_brands").aggregate([
+        {
+            $lookup:{
+                from: 'brands',
+                localField: 'brandId',
+                foreignField: '_id',
+                as: 'brands'
+            },
+        },
+        { $match : find }
+    ]);
+
+    brands = await brandsRef.toArray();
+    for ( let brand of brands ){
+        brand.name = brand.brands[0].name;
+        brand._id = brand.brandId;
+    }
+
+    return brands;
+}
+
 const getBrandsAndCategories =  async (root, args, context, info) => {
     const brands = await getBrands(root, args, context, info);
-    const categories = await categoryResolvers.getCategories();
+    const categories = await categoryResolvers.getCategories(root, args, context, info);
 
     return {
         brands,
@@ -107,7 +145,8 @@ module.exports = {
         getBrands,
         getBrandsAndCategories,
         getBrandsAndProducts,
-        getSubscribedBrands
+        getSubscribedBrands,
+        getCustomerBrands
     },
     mutations: {
         subscribeToBrand

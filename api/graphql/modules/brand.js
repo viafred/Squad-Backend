@@ -35,6 +35,12 @@ const typeDefs = gql`
         products: [Product],
     }
     
+    type BrandCategoryProduct {
+        brands: [Brand],
+        categories: [Category],
+        products: [Product]
+    }
+    
     extend type Mutation {
         subscribeToBrand(id: ID, userId: ID): Boolean
     }
