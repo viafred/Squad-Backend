@@ -5,40 +5,42 @@ const categoryResolvers = require('../resolvers/category')
 const productResolvers = require('../resolvers/product')
 
 const getBrands = async (root, args, context, info) => {
-    const brandsRef = dbClient.db(dbName).collection("brands");
-    let brands = [];
+    const brandsRef = dbClient.db(dbName).collection("customer_brands");
+    let find = {}
     if ( args.brandIds ){
         let brandIds = [];
         for ( let brandId of args.brandIds ){
             brandIds.push(new ObjectId(brandId));
         }
-        brands = await brandsRef.aggregate([
-            {
-                $lookup:{
-                    from: 'customers',
-                    localField: '_id',
-                    foreignField: 'brandId',
-                    as: 'customer'
-                },
-            },
-            { $match : { _id: { $in: brandIds }, verified: true } }
-        ]).toArray();
+
+        find = { brandId: { $in: brandIds }, 'brands.verified': true, 'customer.companyLogo': {$ne: null}, 'customer.companyBanner': {$ne: null} };
     } else {
-        brands = await brandsRef.aggregate([
-            {
-                $lookup:{
-                    from: 'customers',
-                    localField: '_id',
-                    foreignField: 'brandId',
-                    as: 'customer'
-                },
-            },
-            { $match : { verified: true } }
-        ]).toArray();
+        find =  { 'brands.verified': true, 'customer.companyLogo': {$ne: null}, 'customer.companyBanner': {$ne: null}  } ;
     }
+
+    const brands = await brandsRef.aggregate([
+        {
+            $lookup:{
+                from: 'customers',
+                localField: 'customerId',
+                foreignField: '_id',
+                as: 'customer'
+            },
+        },
+        {
+            $lookup:{
+                from: 'brands',
+                localField: 'brandId',
+                foreignField: '_id',
+                as: 'brands'
+            },
+        },
+        { $match :  find }
+    ]).toArray();
 
     if ( brands.length > 0 ){
         for ( let brand of brands ){
+            brand._id = brand.brandId;
             brand.banner = brand.customer && brand.customer.length > 0 ? brand.customer[0].companyBanner : '';
             brand.logo = brand.customer && brand.customer.length > 0 ? brand.customer[0].companyLogo : '';
         }
