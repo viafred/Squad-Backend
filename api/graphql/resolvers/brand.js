@@ -111,9 +111,17 @@ const getSubscribedBrands =  async (root, args, context, info) => {
     const brandSubscriptions = await dbClient.db(dbName).collection("brand_subscriptions").aggregate([
         {
             $lookup:{
-                from: 'customers',
+                from: 'customer_brands',
                 localField: 'brandId',
                 foreignField: 'brandId',
+                as: 'cb'
+            },
+        },
+        {
+            $lookup:{
+                from: 'customers',
+                localField: 'cb.customerId',
+                foreignField: '_id',
                 as: 'customer'
             },
         },

@@ -85,13 +85,25 @@ const getBrandUploads =  async (root, args, context, info) => {
         { $match : { brandId : new ObjectId(args.brandId) } }
     ]).toArray();
 
+
     const brandSubscriptions = await dbClient.db(dbName).collection("brand_subscriptions").findOne({brandId: new ObjectId(args.brandId), userId: new ObjectId(args.userId)})
     const brand = await dbClient.db(dbName).collection("brands").findOne({_id: new ObjectId(args.brandId)});
-    const customer = await dbClient.db(dbName).collection("customers").findOne({brandId: new ObjectId(args.brandId)});
 
-    if ( customer ){
-        brand.banner = customer.companyBanner;
-        brand.logo = customer.companyLogo;
+    const customers = await dbClient.db(dbName).collection("customer_brands").aggregate([
+        {
+            $lookup:{
+                from: "customers",
+                localField : "customerId",
+                foreignField : "_id",
+                as : "customer",
+            }
+        },
+        { $match : { brandId : new ObjectId(args.brandId) } }
+    ]).toArray();
+
+    if ( customers ){
+        brand.banner = customers[0].customer[0].companyBanner;
+        brand.logo = customers[0].customer[0].companyLogo;
     }
 
     for ( let upload of uploads ){

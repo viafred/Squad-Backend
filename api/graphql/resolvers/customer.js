@@ -97,7 +97,6 @@ const getCustomerProducts =  async (root, args, context, info) => {
         find.customerId =  new ObjectId(args.customerId);
     }
 
-    console.log(find);
     const products = await dbClient.db(dbName).collection("products").aggregate([
         {
             $lookup:{
@@ -164,7 +163,7 @@ const updateCustomer =  async (parent, args) => {
 
     let customerBrand = await dbClient.db(dbName).collection('customer_brands').findOne({ brandId: customerInput.brandId });
     if ( !customerBrand ){
-        await dbClient.db(dbName).collection('customer_brands').insertOne({customerId: _id, brandId: customerInput.brandId });
+        await dbClient.db(dbName).collection('customer_brands').insertOne({customerId: _id, brandId: customerInput.brandId, name: customerInput.companyBrand  });
     }
 
     customerInput.finishSteps = true;
