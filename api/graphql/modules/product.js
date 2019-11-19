@@ -6,6 +6,7 @@ const productResolvers = require('../resolvers/product')
 const typeDefs = gql`
     extend type Query {
         getProducts(productIds:[String]): [Product],
+        productSearch(searchParam: String): [Product]
     }
       
     type Product {

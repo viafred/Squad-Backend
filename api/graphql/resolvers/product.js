@@ -46,6 +46,45 @@ const getProducts = async (root, args, context, info) => {
     return products;
 }
 
+const productSearch = async (root, args, context, info) => {
+    const products = await dbClient.db(dbName).collection("products").aggregate([
+        { $match : { $text : { $search : args.searchParam } }  },
+        { $sort: { score: { $meta: "textScore" } } },
+        {
+            $lookup:{
+                from: "users",
+                localField : "memberId",
+                foreignField : "_id",
+                as : "member"
+            }
+        },
+        {
+            $lookup:{
+                from: "brands",
+                localField : "brandId",
+                foreignField : "_id",
+                as : "brand",
+            }
+        },
+        {
+            $lookup:{
+                from: "categories",
+                localField : "categoryId",
+                foreignField : "_id",
+                as : "category"
+            }
+        },
+
+    ]).toArray();
+
+    for ( let product of products ){
+        product.brand = product.brand[0];
+        product.member = product.member[0];
+        product.category = product.category[0];
+    }
+
+    return products;
+}
 
 /* MUTATIONS */
 const addProduct =  async (parent, args) => {
@@ -143,7 +182,8 @@ const removeProduct =  async (parent, args) => {
 
 module.exports = {
     queries: {
-        getProducts
+        getProducts,
+        productSearch
     },
     mutations: {
         addProduct,
