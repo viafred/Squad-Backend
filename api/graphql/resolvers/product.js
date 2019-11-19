@@ -48,16 +48,8 @@ const getProducts = async (root, args, context, info) => {
 
 const productSearch = async (root, args, context, info) => {
     const products = await dbClient.db(dbName).collection("products").aggregate([
-        { $match : { $text : { $search : args.searchParam } }  },
+        { $match : { $text : { $search : args.searchParam }, customerId: new ObjectId(args.customerId) }  },
         { $sort: { score: { $meta: "textScore" } } },
-        {
-            $lookup:{
-                from: "users",
-                localField : "memberId",
-                foreignField : "_id",
-                as : "member"
-            }
-        },
         {
             $lookup:{
                 from: "brands",
@@ -79,7 +71,6 @@ const productSearch = async (root, args, context, info) => {
 
     for ( let product of products ){
         product.brand = product.brand[0];
-        product.member = product.member[0];
         product.category = product.category[0];
     }
 
