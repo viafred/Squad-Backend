@@ -9,16 +9,20 @@ const typeDefs = gql`
         getUserUploads(userId: String): [UploadPhoto]
         getBrandUploads(brandId: String, userId: String): BrandUpload
         uploadsSearch(searchParam: String): [SearchUploadPhoto]
+        uploadsFilter(filter: FilterInput): [SearchUploadPhoto]
+    }
+    
+    input FilterInput {
+        gender: String
+        location: String
+        age: String
+        education: String
+        categoryNames: [String]
+        productName: String
     }
     
     type UploadPhotoLike {
         id: ID!
-        member: User
-        like: Boolean
-    }
-    
-    type UploadPhotoLikeInput {
-        id: ID
         member: User
         like: Boolean
     }
@@ -43,6 +47,7 @@ const typeDefs = gql`
     }
     
     type SearchUser {
+        _id: String
         pictureUrl: String
         role: String
         email: String

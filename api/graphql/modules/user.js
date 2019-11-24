@@ -20,10 +20,13 @@ const typeDefs = gql`
     }
     
     input UserInput {
-        id: String
+        _id: String
+        firstName: String
+        lastName: String 
         displayName: String
+        name: String
         email: String
-        photoURL: String
+        pictureUrl: String
         dob: String
         gender: String
         locationCity: String

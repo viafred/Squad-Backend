@@ -160,6 +160,96 @@ const uploadsSearch = async (root, args, context, info) => {
     return uploads;
 }
 
+const uploadsFilter = async (root, args, context, info) => {
+    const { gender = null, location = null, education = null, age = null, categoryNames = [], productName = ''} = args.filter;
+
+    const searchCategory = categoryNames ? _.map(categoryNames).join(' ') : '';
+    const search = searchCategory + " " + productName
+
+    let userFind = [];
+    let userFindFilter = {};
+
+    if ( gender ){
+        userFind.push( { gender: new RegExp(gender) });
+    }
+
+    if ( location ){
+        userFind.push( { '$or': [{ "hometownCity": new RegExp(location) }, { "hometownState": new RegExp(location)}] });
+    }
+
+    if ( education ){
+        userFind.push( { education: new RegExp(education) });
+    }
+
+    if ( age ){
+        userFind.push( { age: new RegExp(age) });
+    }
+
+    if ( userFind.length ){
+        userFindFilter['$and'] = userFind;
+    }
+
+    const users = await dbClient.db(dbName).collection("users").find(userFindFilter).toArray();
+    let userIds = [];
+
+    for ( let user of users ){
+        userIds.push(new ObjectId(user._id));
+    }
+
+    const pipeline = [];
+
+    let $match = {};
+    const $sort = { $sort: { score: { $meta: "textScore" } } };
+
+    if ( userIds && userIds.length > 0 && search != " " ){
+        $match = { $match : { $text: { $search: search }, memberId: { $in: userIds } }  };
+        pipeline.push($match, $sort);
+    } else if ( search != " " && !userIds.length ){
+        $match = { $match : { $text: { $search: search } } };
+        pipeline.push($match, $sort);
+    } else {
+        $match = {$match: {memberId: {$in: userIds}}};
+        pipeline.push($match);
+    }
+
+    pipeline.push({
+            $lookup:{
+                from: "users",
+                localField : "memberId",
+                foreignField : "_id",
+                as : "member"
+            }
+        },
+        {
+            $lookup:{
+                from: "brands",
+                localField : "brandId",
+                foreignField : "_id",
+                as : "brand",
+            }
+        },
+        {
+            $lookup:{
+                from: "categories",
+                localField : "categoryId",
+                foreignField : "_id",
+                as : "category"
+            }
+        });
+
+    console.log($match);
+    console.log(userIds);
+    const uploads = await dbClient.db(dbName).collection("uploads").aggregate(pipeline).toArray();
+
+    for ( let upload of uploads ){
+        upload.brand = upload.brand[0];
+        upload.member = upload.member[0];
+        upload.category = upload.category[0];
+    }
+
+    return uploads;
+}
+
 /* MUTATIONS */
 
 const addUploadedPhoto =  async (parent, args) => {
@@ -264,7 +354,8 @@ module.exports = {
         getUploadedPhotos,
         getUserUploads,
         getBrandUploads,
-        uploadsSearch
+        uploadsSearch,
+        uploadsFilter
     },
     mutations: {
         addUploadedPhoto,
