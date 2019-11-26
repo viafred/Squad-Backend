@@ -1,5 +1,8 @@
 require('events').EventEmitter.defaultMaxListeners = Infinity
 
+const dotenv = require('dotenv');
+dotenv.config();
+
 const express = require('express');
 const { ApolloServer } = require('apollo-server-express');
 
@@ -10,9 +13,6 @@ const cors = require('cors');
 
 const firebaseAdmin = require('firebase-admin');
 const serviceAccount = require('./api/config/service-account.json'); /*-> This refers to the google cloud service account, [Learn How to Get it From](https://firebase.google.com/docs/admin/setup)*/
-
-const dotenv = require('dotenv');
-dotenv.config();
 
 firebaseAdmin.initializeApp({
     credential: firebaseAdmin.credential.cert(serviceAccount),
