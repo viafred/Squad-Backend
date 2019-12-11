@@ -6,8 +6,10 @@ const brandResolvers = require('../resolvers/brand')
 const typeDefs = gql`
     extend type Query {
         getBrands(brandIds:[String]): [Brand],
+        getUploadedBrands(brandIds:[String]): [Brand],
         getBrandsAndCategories: BrandAndCategory
         getBrandsAndProducts(brandIds:[String], productIds: [String]): BrandAndProduct 
+        getUploadedBrandsAndUploadPhotos(brandIds:[String], productIds: [String]): BrandAndUploadPhoto 
         getSubscribedBrands(userId: ID):[Brand]
     }
     
@@ -33,6 +35,11 @@ const typeDefs = gql`
     type BrandAndProduct {
         brands: [Brand],
         products: [Product],
+    }
+    
+    type BrandAndUploadPhoto {
+        brands: [Brand],
+        uploads: [UploadPhoto],
     }
     
     type BrandCategoryProduct {

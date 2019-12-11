@@ -3,6 +3,9 @@ const ObjectId = require('mongodb').ObjectId;
 
 const categoryResolvers = require('../resolvers/category')
 const productResolvers = require('../resolvers/product')
+const uploadPhotoResolvers = require('../resolvers/uploadPhoto')
+
+var _ = require('lodash');
 
 const getBrands = async (root, args, context, info) => {
     const brandsRef = dbClient.db(dbName).collection("customer_brands");
@@ -48,6 +51,57 @@ const getBrands = async (root, args, context, info) => {
 
     return brands;
 }
+
+//It get UNIQUE brand names
+const getUploadedBrands = async (root, args, context, info) => {
+    const uploadsRef = dbClient.db(dbName).collection("uploads");
+    let find = {}
+
+    if ( args.brandIds ){
+        let brandIds = [];
+        for ( let brandId of args.brandIds ){
+            brandIds.push(new ObjectId(brandId));
+        }
+
+        find = { brandId: { $in: brandIds } };
+    }
+
+    let brands = await uploadsRef.aggregate([
+        {
+            $lookup:{
+                from: 'customer_brands',
+                localField: 'brandId',
+                foreignField: 'brandId',
+                as: 'customerBrand'
+            },
+        },
+        {
+            $lookup:{
+                from: 'customers',
+                localField: 'customerBrand.customerId',
+                foreignField: '_id',
+                as: 'customer'
+            },
+        },
+        { $match :  find },
+        { $sort: { createdAt : -1 } }
+    ]).toArray();
+
+    if ( brands.length > 0 ){
+        for ( let brand of brands ){
+            brand._id = new ObjectId(brand.brandId);
+            brand.name = brand.brandName;
+            brand.banner = brand.customer && brand.customer.length > 0 ? brand.customer[0].companyBanner : '';
+            brand.logo = brand.customer && brand.customer.length > 0 ? brand.customer[0].companyLogo : '';
+        }
+    }
+
+    brands = _.uniqBy(brands, 'name');
+
+    return brands;
+}
+
+
 
 const getCustomerBrands =  async (root, args, context, info) => {
     let find = {};
@@ -107,6 +161,16 @@ const getBrandsAndProducts =  async (root, args, context, info) => {
     }
 }
 
+const getUploadedBrandsAndUploadPhotos =  async (root, args, context, info) => {
+    let brands = await getUploadedBrands(root, args, context, info);
+    let uploads = await uploadPhotoResolvers.queries.getUploadedPhotos(root, args, context, info);
+
+    return {
+        brands,
+        uploads
+    }
+}
+
 const getSubscribedBrands =  async (root, args, context, info) => {
     const brandSubscriptions = await dbClient.db(dbName).collection("brand_subscriptions").aggregate([
         {
@@ -155,6 +219,8 @@ module.exports = {
         getBrands,
         getBrandsAndCategories,
         getBrandsAndProducts,
+        getUploadedBrands,
+        getUploadedBrandsAndUploadPhotos,
         getSubscribedBrands,
         getCustomerBrands
     },
