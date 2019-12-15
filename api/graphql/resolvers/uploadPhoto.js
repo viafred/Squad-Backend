@@ -133,8 +133,38 @@ const getBrandUploads =  async (root, args, context, info) => {
 }
 
 const uploadsSearch = async (root, args, context, info) => {
+    let { searchParam, brandIds, uploadIds } = args;
+
+
+    let $match = { $match: {} };
+    const $sort = { $sort: { score: { $meta: "textScore" } } };
+
+    if ( searchParam != '-' ){
+        $match.$match.$text = { $search: searchParam };
+    }
+
+    if ( brandIds != '-' ){
+        brandIds = brandIds.split(',');
+        let $brandIds = [];
+        for ( let brandId of brandIds ){
+            $brandIds.push(new ObjectId(brandId));
+        }
+
+        $match.$match.brandId = { $in: $brandIds }
+    }
+
+    if ( uploadIds != '-' ){
+        uploadIds = uploadIds.split(',');
+        let $uploadIds = [];
+        for ( let uploadId of uploadIds ){
+            $uploadIds.push(new ObjectId(uploadId));
+        }
+
+        $match.$match._id = { $in: $uploadIds }
+    }
+
     const uploads = await dbClient.db(dbName).collection("uploads").aggregate([
-        { $match : { $text: { $search: args.searchParam } } },
+        $match,
         {
             $lookup:{
                 from: "users",
@@ -248,8 +278,6 @@ const uploadsFilter = async (root, args, context, info) => {
             }
         });
 
-    console.log($match);
-    console.log(userIds);
     const uploads = await dbClient.db(dbName).collection("uploads").aggregate(pipeline).toArray();
 
     for ( let upload of uploads ){

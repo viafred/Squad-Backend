@@ -8,7 +8,7 @@ const typeDefs = gql`
         getUploadedPhotos(productIds:[String]): [UploadPhoto],
         getUserUploads(userId: String): [UploadPhoto]
         getBrandUploads(brandId: String, userId: String): BrandUpload
-        uploadsSearch(searchParam: String): [SearchUploadPhoto]
+        uploadsSearch(searchParam: String, brandIds: String, uploadIds: String): [SearchUploadPhoto]
         uploadsFilter(filter: FilterInput): [SearchUploadPhoto]
     }
     
