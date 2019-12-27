@@ -52,6 +52,25 @@ const getBrands = async (root, args, context, info) => {
     return brands;
 }
 
+const getMemberBrands = async (root, args, context, info) => {
+    const brandsRef = dbClient.db(dbName).collection("brands");
+    let brands = [];
+    let find = {};
+    if ( args.brandIds ){
+        let brandIds = [];
+        for ( let brandId of args.brandIds ){
+            brandIds.push(new ObjectId(brandId));
+        }
+
+        find = { _id: { $in: brandIds } };
+    }
+
+    brands = await brandsRef.find(find).toArray();
+    brands = _.uniqBy(brands, 'name');
+
+    return brands;
+}
+
 //It get UNIQUE brand names
 const getUploadedBrands = async (root, args, context, info) => {
     const uploadsRef = dbClient.db(dbName).collection("uploads");
@@ -142,7 +161,7 @@ const getCustomerBrands =  async (root, args, context, info) => {
 }
 
 const getBrandsAndCategories =  async (root, args, context, info) => {
-    const brands = await getBrands(root, args, context, info);
+    const brands = await getMemberBrands(root, args, context, info);
     const categories = await categoryResolvers.getCategories(root, args, context, info);
 
     return {
@@ -217,6 +236,7 @@ const subscribeToBrand =  async (parent, args) => {
 module.exports = {
     queries: {
         getBrands,
+        getMemberBrands,
         getBrandsAndCategories,
         getBrandsAndProducts,
         getUploadedBrands,
