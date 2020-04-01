@@ -4,19 +4,39 @@ const ObjectId = require('mongodb').ObjectId;
 var _ = require('lodash');
 
 const getUploadedPhotos = async (root, args, context, info) => {
-    let find = {};
 
-    if ( args.productIds ){
-        let productIds = [];
-        for ( let productId of args.productIds ){
-            productIds.push(new ObjectId(productId));
+    const uploads = await dbClient.db(dbName).collection("uploads").aggregate([
+        {
+            $lookup:{
+                from: "users",
+                localField : "memberId",
+                foreignField : "_id",
+                as : "member"
+            }
+        },
+        {
+            $lookup:{
+                from: "brands",
+                localField : "brandId",
+                foreignField : "_id",
+                as : "brand"
+            }
+        },
+        {
+            $lookup:{
+                from: "categories",
+                localField : "categoryId",
+                foreignField : "_id",
+                as : "category"
+            }
         }
+    ]).toArray();
 
-        find = { _id: { $in: productIds } };
+    for ( let upload of uploads ){
+        upload.brand = upload.brand[0];
+        upload.member = upload.member[0];
+        upload.category = upload.category[0];
     }
-
-    const uploadedRef = dbClient.db(dbName).collection("uploads");
-    const uploads = await uploadedRef.find(find).toArray();
 
     return uploads;
 }
