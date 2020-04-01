@@ -154,16 +154,18 @@ const getBrandUploads =  async (root, args, context, info) => {
 
 const uploadsSearch = async (root, args, context, info) => {
     let { searchParam, brandIds, uploadIds } = args;
-
+console.log(searchParam)
+console.log(brandIds)
+console.log(uploadIds)
 
     let $match = { $match: {} };
     const $sort = { $sort: { score: { $meta: "textScore" } } };
 
-    if ( searchParam != '-' ){
+    if ( searchParam && searchParam != '-' ){
         $match.$match.$text = { $search: searchParam };
     }
 
-    if ( brandIds != '-' ){
+    if ( brandIds && brandIds != '-' ){
         brandIds = brandIds.split(',');
         let $brandIds = [];
         for ( let brandId of brandIds ){
@@ -173,7 +175,7 @@ const uploadsSearch = async (root, args, context, info) => {
         $match.$match.brandId = { $in: $brandIds }
     }
 
-    if ( uploadIds != '-' ){
+    if ( uploadIds && uploadIds != '-' ){
         uploadIds = uploadIds.split(',');
         let $uploadIds = [];
         for ( let uploadId of uploadIds ){
