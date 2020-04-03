@@ -153,10 +153,7 @@ const getBrandUploads =  async (root, args, context, info) => {
 }
 
 const uploadsSearch = async (root, args, context, info) => {
-    let { searchParam, brandIds, uploadIds } = args;
-console.log(searchParam)
-console.log(brandIds)
-console.log(uploadIds)
+    let { searchParam, brandIds, uploadIds, categoryIds } = args;
 
     let $match = { $match: {} };
     const $sort = { $sort: { score: { $meta: "textScore" } } };
@@ -183,6 +180,16 @@ console.log(uploadIds)
         }
 
         $match.$match._id = { $in: $uploadIds }
+    }
+
+    if ( categoryIds && categoryIds != '-' ){
+        categoryIds = categoryIds.split(',');
+        let $categoryIds= [];
+        for ( let categoryId of categoryIds ){
+            $categoryIds.push(new ObjectId(categoryId));
+        }
+
+        $match.$match.categoryId = { $in: $categoryIds }
     }
 
     const uploads = await dbClient.db(dbName).collection("uploads").aggregate([
@@ -213,6 +220,7 @@ console.log(uploadIds)
         },
 
     ]).toArray();
+
 
     for ( let upload of uploads ){
         upload.brand = upload.brand[0];
