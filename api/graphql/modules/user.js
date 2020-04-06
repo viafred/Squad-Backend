@@ -9,8 +9,10 @@ const typeDefs = gql`
         users: [User],
         getSpotlightMembers: [UploadPhoto]
         getUserByFirebaseId(firebaseId: ID!): User
+        getLookbookByUserId(userId: ID!): Lookbook
+        getLookbook(id: ID!): Lookbook
     }
-    
+
     type User {
         _id: ID
         displayName: String
@@ -18,11 +20,20 @@ const typeDefs = gql`
         hasUploads: Boolean
         pictureUrl: String
     }
-    
+
+    type Lookbook {
+        _id: ID
+        userId:ID
+        brandIds:[String]
+        categoryIds:[String]
+        uploadIds:[String]
+        photoURL:String
+    }
+
     input UserInput {
         _id: String
         firstName: String
-        lastName: String 
+        lastName: String
         displayName: String
         name: String
         email: String
@@ -46,9 +57,18 @@ const typeDefs = gql`
         age: String
         role: String
     }
-    
+
+    input LookbookInput {
+        userId:ID!
+        brandIds:[String]
+        categoryIds:[String]
+        uploadIds:[String]
+        photoURL:String
+    }
+
     extend type Mutation {
         updateUser(id:ID, user: UserInput): User!
+        lookbookit(data:LookbookInput):String
     }
 `
 
