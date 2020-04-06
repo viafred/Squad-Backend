@@ -62,7 +62,7 @@ const getSpotlightMembers = async (root, args, context, info) => {
 }
 
 const getLookbookByUserId = async (root, { userId }, context, info) => {
-    const lookbook = await dbClient.db(dbName).collection("users_lookbook").findOne({userId: new ObjectId(userId)});
+    const lookbook = await dbClient.db(dbName).collection("users_lookbook").find({userId: new ObjectId(userId)}).toArray();
 
     return lookbook;
 
