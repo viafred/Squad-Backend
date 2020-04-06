@@ -9,7 +9,7 @@ const typeDefs = gql`
         users: [User],
         getSpotlightMembers: [UploadPhoto]
         getUserByFirebaseId(firebaseId: ID!): User
-        getLookbookByUserId(userId: ID!): Lookbook
+        getLookbookByUserId(userId: ID!): [Lookbook]
         getLookbook(id: ID!): Lookbook
     }
 
