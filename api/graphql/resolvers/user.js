@@ -62,8 +62,34 @@ const getSpotlightMembers = async (root, args, context, info) => {
 }
 
 const getLookbookByUserId = async (root, { userId }, context, info) => {
-    const lookbook = await dbClient.db(dbName).collection("users_lookbook").find({userId: new ObjectId(userId)}).toArray();
+    const lookbook = await dbClient.db(dbName).collection("users_lookbook").aggregate([
+        { "$lookup": {
+            "from": "categories",
+            "localField": "categoryIds",
+            "foreignField": "_id",
+            "as": "categories"
+        } },
+        { "$lookup": {
+            "from": "brands",
+            "localField": "brandIds",
+            "foreignField": "_id",
+            "as": "brands"
+        } },
+        { "$lookup": {
+            "from": "uploads",
+            "localField": "uploadIds",
+            "foreignField": "_id",
+            "as": "uploads"
+        } },
+        { "$addFields": {
+            "brands": "$brands.name",
+            "categories": "$categories.name",
+            "uploads": "$uploads.productName"
+        } },
+        { $match : { userId : new ObjectId(userId) } }
+    ]).toArray();
 
+    console.log(lookbook)
     return lookbook;
 
 }

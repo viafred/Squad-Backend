@@ -28,6 +28,9 @@ const typeDefs = gql`
         categoryIds:[String]
         uploadIds:[String]
         photoURL:String
+        brands:[String]
+        categories:[String]
+        uploads:[String]
     }
 
     input UserInput {
