@@ -59,6 +59,8 @@ const typeDefs = gql`
         work: String
         age: String
         role: String
+        paymentMethod:String
+        paymentUsername:String
     }
 
     input LookbookInput {
