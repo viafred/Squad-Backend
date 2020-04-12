@@ -107,13 +107,17 @@ const updateUser = async (parent, args) => {
         userInput.dob = new Date(userInput.dob);
     }
 
-    await dbClient.db(dbName).collection('users').updateOne(
-        { _id: new ObjectId(args.id) },
-        {
-            $set: userInput,
-            $currentDate: { updatedAt: true }
-        }
-    );
+    try {
+        await dbClient.db(dbName).collection('users').updateOne(
+            { _id: new ObjectId(args.id) },
+            {
+                $set: userInput,
+                $currentDate: { updatedAt: true }
+            }
+        );
+    } catch (e){
+        console.log(e)
+    }
 
     return { _id: new ObjectId(args.id) };
 }
