@@ -19,6 +19,13 @@ const typeDefs = gql`
         email: String
         hasUploads: Boolean
         pictureUrl: String
+        dob: String
+        gender: String
+        locationCity: String
+        locationState: String
+        age: String
+        paymentMethod:String
+        paymentUsername:String
     }
 
     type Lookbook {
