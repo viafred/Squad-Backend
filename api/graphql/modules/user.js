@@ -1,6 +1,5 @@
 const { gql } = require('apollo-server');
 
-
 const userResolvers = require('../resolvers/user')
 
 const typeDefs = gql`
@@ -13,13 +12,15 @@ const typeDefs = gql`
         getLookbook(id: ID!): Lookbook
     }
 
+    scalar Date
+
     type User {
         _id: ID
         displayName: String
         email: String
         hasUploads: Boolean
         pictureUrl: String
-        dob: String
+        dob: Date
         gender: String
         locationCity: String
         locationState: String
