@@ -125,10 +125,9 @@ const getCustomerProducts =  async (root, args, context, info) => {
     return products;
 }
 
-const updateCustomer =  async (parent, args) => {
+const saveCustomer =  async (parent, args) => {
     let customerInput = JSON.parse(JSON.stringify(args.customer));
-    let _id = new ObjectId(args.id);
-
+    let _id = args.id ? new ObjectId(args.id) : null;
 
     let brand = await dbClient.db(dbName).collection('brands').aggregate(
         [
@@ -166,18 +165,25 @@ const updateCustomer =  async (parent, args) => {
         await dbClient.db(dbName).collection('customer_brands').insertOne({customerId: _id, brandId: customerInput.brandId, name: customerInput.companyBrand  });
     }
 
-    customerInput.finishSteps = true;
-
     delete customerInput._id;
-    await dbClient.db(dbName).collection('customers').updateOne(
-        { _id: new ObjectId(_id) },
-        {
-            $set: customerInput,
-            $currentDate: { updatedAt: true }
-        }
-    );
 
-    return { _id: new ObjectId(args.id) };
+    let lastId = _id;
+    if ( _id ){
+
+        await dbClient.db(dbName).collection('customers').updateOne(
+            { _id: new ObjectId(_id) },
+            {
+                $set: customerInput,
+                $currentDate: { updatedAt: true }
+            }
+        );
+    } else {
+        customerInput.status = 'pending';
+        let customer = await dbClient.db(dbName).collection('customers').insertOne(customerInput);
+        lastId = customer.insertedId.toString();
+    }
+
+    return { _id: new ObjectId(lastId) };
 }
 
 
@@ -191,6 +197,6 @@ module.exports = {
         getCustomerProducts
     },
     mutations: {
-        updateCustomer
+        saveCustomer
     }
 }

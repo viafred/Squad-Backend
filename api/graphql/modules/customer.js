@@ -7,13 +7,14 @@ const typeDefs = gql`
     extend type Query {
         getCustomer(id: String): Customer
         getCustomerBrandsAndCategories(customerId: String): BrandAndCategory
-        getCustomerBrandsCategoriesProducts(customerId: String, brandIds:[String], categoryIds:[String], productIds: [String]): BrandCategoryProduct 
+        getCustomerBrandsCategoriesProducts(customerId: String, brandIds:[String], categoryIds:[String], productIds: [String]): BrandCategoryProduct
         getCustomerProducts(customerId: String, brandIds:[String], categoryIds:[String], productIds: [String]): [Product]
         customers: [Customer]
     }
-    
+
     type Customer {
         _id: ID
+        status:String
         user: User
         companyName: String
         companyAddress1: String
@@ -41,7 +42,7 @@ const typeDefs = gql`
         billingZipcode: String
         brand: Brand
     }
-    
+
     input CustomerInput {
         _id: String
         companyName: String
@@ -71,9 +72,9 @@ const typeDefs = gql`
         billingZipcode: String
         finishSteps: Boolean
     }
-    
+
     extend type Mutation {
-        updateCustomer(id:ID, customer: CustomerInput): Customer!
+        saveCustomer(id:ID, customer: CustomerInput): Customer!
     }
 `
 
