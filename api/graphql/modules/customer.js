@@ -73,8 +73,15 @@ const typeDefs = gql`
         finishSteps: Boolean
     }
 
+    input GroupInput {
+        customerId:ID!
+        uploadIds:[String]
+        name:String
+    }
+
     extend type Mutation {
         saveCustomer(id:ID, customer: CustomerInput): Customer!
+        createGroup(data:GroupInput):String
     }
 `
 

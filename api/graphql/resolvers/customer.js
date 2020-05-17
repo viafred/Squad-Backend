@@ -141,8 +141,6 @@ const saveCustomer =  async (parent, args) => {
         ]
     ).toArray();
 
-    console.log(brand);
-
     if (brand.length > 0){
         customerInput.brandId = new ObjectId(brand[0]._id);
 
@@ -186,6 +184,23 @@ const saveCustomer =  async (parent, args) => {
     return { _id: new ObjectId(lastId) };
 }
 
+const createGroup =  async (parent, args) => {
+    try {
+        let group = {
+            customerId: new ObjectId(args.data.customerId),
+            uploadIds: args.data.uploadIds ? args.data.uploadIds.map(id => new ObjectId(id)) : [],
+            name: args.data.name,
+            createdAt: new Date(),
+            updatedAt: new Date()
+        };
+
+        group = await dbClient.db(dbName).collection('customer_groups').insertOne(group);
+
+        return group.insertedId.toString();
+    } catch (e) {
+        return e;
+    }
+}
 
 module.exports = {
     queries: {
@@ -197,6 +212,7 @@ module.exports = {
         getCustomerProducts
     },
     mutations: {
-        saveCustomer
+        saveCustomer,
+        createGroup
     }
 }

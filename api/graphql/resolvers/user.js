@@ -89,7 +89,6 @@ const getLookbookByUserId = async (root, { userId }, context, info) => {
         { $match : { userId : new ObjectId(userId) } }
     ]).toArray();
 
-    console.log(lookbook)
     return lookbook;
 
 }
