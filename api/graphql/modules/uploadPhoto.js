@@ -15,10 +15,12 @@ const typeDefs = gql`
     input FilterInput {
         gender: String
         location: String
-        age: String
+        ageFrom: String
+        ageTo: String
         education: String
         categoryNames: [String]
-        productName: String
+        brandNames: [String]
+        productNames: [String]
     }
 
     type UploadPhotoLike {

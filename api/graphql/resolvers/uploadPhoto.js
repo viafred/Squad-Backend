@@ -232,10 +232,13 @@ const uploadsSearch = async (root, args, context, info) => {
 }
 
 const uploadsFilter = async (root, args, context, info) => {
-    const { gender = null, location = null, education = null, age = null, categoryNames = [], productName = ''} = args.filter;
+    const { gender = null, location = null, education = null, ageFrom = null, ageTo = null, categoryNames = [], productNames = [], brandNames = []} = args.filter;
 
     const searchCategory = categoryNames ? _.map(categoryNames).join(' ') : '';
-    const search = searchCategory + " " + productName
+    const searchBrand = brandNames ? _.map(brandNames).join(' ') : '';
+    const searchProduct = productNames ? _.map(productNames).join(' ') : '';
+
+    const search = searchCategory + " " + searchBrand + " " + searchProduct;
 
     let userFind = [];
     let userFindFilter = {};
@@ -252,8 +255,16 @@ const uploadsFilter = async (root, args, context, info) => {
         userFind.push( { education: new RegExp(education) });
     }
 
-    if ( age ){
-        userFind.push( { age: new RegExp(age) });
+    if ( ageFrom && ageTo){
+        userFind.push( { age: { $gte: ageFrom, $lte: ageTo } });
+    }
+
+    if ( ageFrom && !ageTo ){
+        userFind.push( { age: { $gte: ageFrom } });
+    }
+
+    if ( !ageFrom && ageTo ){
+        userFind.push( { age: { $lte: ageTo } });
     }
 
     if ( userFind.length ){
@@ -272,10 +283,10 @@ const uploadsFilter = async (root, args, context, info) => {
     let $match = {};
     const $sort = { $sort: { score: { $meta: "textScore" } } };
 
-    if ( userIds && userIds.length > 0 && search != " " ){
+    if ( userIds && userIds.length > 0 && search.trim().length != 0 ){
         $match = { $match : { $text: { $search: search }, memberId: { $in: userIds } }  };
         pipeline.push($match, $sort);
-    } else if ( search != " " && !userIds.length ){
+    } else if ( search.trim().length != 0 && !userIds.length ){
         $match = { $match : { $text: { $search: search } } };
         pipeline.push($match, $sort);
     } else {
