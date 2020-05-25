@@ -109,9 +109,7 @@ const saveProduct =  async (parent, args) => {
             createdAt: new Date(),
             updatedAt: new Date()
         };
-        console.log(args.product);
-        console.log(photo);
-
+       
         if ( !photo.brandId ){
             //Brands
             let find = { name : args.product.brand.name.toLowerCase(), customerId: photo.customerId };

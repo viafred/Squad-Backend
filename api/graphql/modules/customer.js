@@ -6,10 +6,32 @@ const customerResolvers = require('../resolvers/customer')
 const typeDefs = gql`
     extend type Query {
         getCustomer(id: String): Customer
+        getCustomerGroups(customerId: String): [CustomerGroup]
+        getCustomerFeedbacks(customerId: String): [CustomerFeedback]
         getCustomerBrandsAndCategories(customerId: String): BrandAndCategory
         getCustomerBrandsCategoriesProducts(customerId: String, brandIds:[String], categoryIds:[String], productIds: [String]): BrandCategoryProduct
         getCustomerProducts(customerId: String, brandIds:[String], categoryIds:[String], productIds: [String]): [Product]
         customers: [Customer]
+    }
+
+    type CustomerGroup {
+        _id: ID
+        customerId: ID
+        name: String
+        uploads: [UploadPhoto]
+    }
+
+    type CustomerFeedback {
+        _id: ID
+        customerId: ID
+        title: String
+        copy: String
+        publishType: String
+        groupId: String
+        group: CustomerGroup
+        status: String
+        createdAt: Date
+        updatedAt: Date
     }
 
     type Customer {
@@ -79,9 +101,20 @@ const typeDefs = gql`
         name:String
     }
 
+    input FeedbackInput {
+        customerId:ID
+        feedbackId:String
+        title:String
+        copy:String
+        publishType:String
+        groupId:String
+        status:String
+    }
+
     extend type Mutation {
         saveCustomer(id:ID, customer: CustomerInput): Customer!
         createGroup(data:GroupInput):String
+        saveFeedback(data:FeedbackInput):String
     }
 `
 

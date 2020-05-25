@@ -125,6 +125,43 @@ const getCustomerProducts =  async (root, args, context, info) => {
     return products;
 }
 
+const getGroups = async (customerId) => {
+    const customerGroups = await dbClient.db(dbName).collection("customer_groups").aggregate([
+        {
+            $lookup:{
+                from: "uploads",
+                localField : "uploadIds",
+                foreignField : "_id",
+                as : "uploads"
+            }
+        },
+        { $match : { customerId : new ObjectId(customerId) } }
+    ]).toArray();
+
+    return customerGroups
+}
+
+const getCustomerGroups = async (root, args, context, info) => {
+    return getGroups(args.customerId)
+}
+
+const getCustomerFeedbacks = async (root, args, context, info) => {
+    let customerFeedbacks = await dbClient.db(dbName).collection("customer_feedbacks").aggregate([
+        {
+            $lookup:{
+                from: "customer_groups",
+                localField : "groupId",
+                foreignField : "_id",
+                as : "group"
+            }
+        },
+        { $match : { customerId : new ObjectId(args.customerId) } }
+    ]).toArray();
+
+    customerFeedbacks = customerFeedbacks.map(f => ({...f, group: f.group[0]}))
+    return customerFeedbacks
+}
+
 const saveCustomer =  async (parent, args) => {
     let customerInput = JSON.parse(JSON.stringify(args.customer));
     let _id = args.id ? new ObjectId(args.id) : null;
@@ -202,6 +239,41 @@ const createGroup =  async (parent, args) => {
     }
 }
 
+const saveFeedback =  async (parent, args) => {
+    try {
+        let id = null;
+        if ( args.data.feedbackId ){
+            const response = await dbClient.db(dbName).collection('customer_feedbacks').updateOne(
+                { _id: new ObjectId(args.data.feedbackId) },
+                {
+                    $set: {status: args.data.status},
+                    $currentDate: { updatedAt: true }
+                }
+            );
+            id = args.data.feedbackId;
+        } else {
+            let feedback = {
+                customerId: new ObjectId(args.data.customerId),
+                title: args.data.title,
+                copy: args.data.copy,
+                publishType: args.data.publishType,
+                status: 'unpublished',
+                groupId: args.data.groupId ? new ObjectId(args.data.groupId) : null,
+                createdAt: new Date(),
+                updatedAt: new Date()
+            };
+
+            group = await dbClient.db(dbName).collection('customer_feedbacks').insertOne(feedback);
+            id = group.insertedId.toString();
+        }
+
+        return id;
+    } catch (e) {
+        return e;
+    }
+}
+
+
 module.exports = {
     queries: {
         customers,
@@ -209,10 +281,16 @@ module.exports = {
         getCustomerCategoriesAndProducts,
         getCustomerBrandsAndCategories,
         getCustomerBrandsCategoriesProducts,
-        getCustomerProducts
+        getCustomerProducts,
+        getCustomerGroups,
+        getCustomerFeedbacks
     },
     mutations: {
         saveCustomer,
-        createGroup
+        createGroup,
+        saveFeedback
+    },
+    helper: {
+        getGroups
     }
 }

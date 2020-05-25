@@ -31,6 +31,7 @@ const typeDefs = gql`
 
     type UploadPhoto {
         _id: ID!
+        memberId: ID
         brand: Brand!
         category: Category!
         productName: String!
@@ -38,6 +39,8 @@ const typeDefs = gql`
         likes: Int
         member: User
         userLikes: [ID]
+        brandName: String
+        categoryName: String
     }
 
     input UploadPhotoInput {
