@@ -10,6 +10,8 @@ const typeDefs = gql`
         getBrandUploads(brandId: String, userId: String): BrandUpload
         uploadsSearch(searchParam: String, brandIds: String, uploadIds: String, categoryIds: String): [SearchUploadPhoto]
         uploadsFilter(filter: FilterInput): [SearchUploadPhoto]
+        getApprovedNotCredited: [UploadPhoto]
+        getApprovedNotCreditedUploadedProducts: [UploadPhoto]
     }
 
     input FilterInput {

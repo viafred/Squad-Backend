@@ -8,7 +8,7 @@ const typeDefs = gql`
         getProducts(productIds:[String]): [Product],
         productSearch(searchParam: String, customerId: String): [Product]
     }
-      
+
     type Product {
         _id: ID!
         brand: Brand
@@ -19,7 +19,7 @@ const typeDefs = gql`
         customer: Customer
         tags: [String]
     }
-    
+
     input ProductInput {
         _id: ID
         brand: BrandInput!
@@ -29,12 +29,12 @@ const typeDefs = gql`
         customerId: String!
         productTags: [String]!
     }
-    
+
     type CategoryAndProduct {
         categories: [Category],
         products: [Product],
     }
-   
+
     extend type Mutation {
         addProduct(product: ProductInput!): String
         updateProduct(product: ProductInput!): String

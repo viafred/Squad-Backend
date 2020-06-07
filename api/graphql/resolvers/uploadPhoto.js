@@ -83,6 +83,14 @@ const getUserUploads =  async (root, args, context, info) => {
     return uploads;
 }
 
+const getApprovedNotCredited = async (root, args, context, info) => {
+    return await dbClient.db(dbName).collection("uploads").find({ approved: true, credited: null }).toArray();
+}
+
+const getApprovedNotCreditedUploadedProducts = async (root, args, context, info) => {
+    return await dbClient.db(dbName).collection("uploads").find({ approved: true, credited: null, productId: {$ne: null} }).toArray();
+}
+
 const getBrandUploads =  async (root, args, context, info) => {
     if ( !args.brandId ){
         return []
@@ -427,7 +435,54 @@ const likeUploadedPhoto =  async (parent, args) => {
     return true;
 }
 
+const compensateUploads = async(amount) => {
+    try {
+        const uploads = await dbClient.db(dbName).collection("uploads").find({ approved: true, credited: null }).toArray();
+        const uploadIds = uploads.map(u => (new ObjectId(u._id)));
+        await dbClient.db(dbName).collection("uploads").updateMany(
+            { _id: {$in: uploadIds} },
+            { $set: { credited: true, earnedAmount: amount }}
+        )
 
+        return { uploadIds, totalCompensated: uploads ? uploads.length * amount : 0 }
+    } catch (e){
+        return e
+    }
+}
+
+const compensateUploadedProducts = async(amount) => {
+    try {
+        const uploads = await dbClient.db(dbName).collection("uploads").find({ approved: true, credited: null, productId: {$ne: []} }).toArray();
+        const uploadIds = uploads.map(u => (new ObjectId(u._id)));
+
+        let productList = []
+        uploads.map(u => ( productList.push(...u.productIds) ));
+
+        await dbClient.db(dbName).collection("uploads").updateMany(
+            { _id: {$in: uploadIds} },
+            [
+                { $set: { credited: true }},
+                { $set: {"earnedAmount": { $multiply: [ {$size:"$productIds"}, amount ] } }}
+            ]
+        )
+
+        return { uploadIds, totalCompensated: productList ? productList.length * amount : 0 }
+    } catch (e){
+        return e
+    }
+}
+
+const compensate = async (payType, amount) => {
+    try {
+        if ( payType === 'upload' ){
+            return compensateUploads(amount)
+        } else {
+            return compensateUploadedProducts(amount)
+        }
+    } catch (e){
+        return e
+    }
+}
 
 module.exports = {
     queries: {
@@ -435,10 +490,15 @@ module.exports = {
         getUserUploads,
         getBrandUploads,
         uploadsSearch,
-        uploadsFilter
+        uploadsFilter,
+        getApprovedNotCredited,
+        getApprovedNotCreditedUploadedProducts
     },
     mutations: {
         addUploadedPhoto,
-        likeUploadedPhoto,
+        likeUploadedPhoto
+    },
+    helper: {
+        compensate
     }
 }
