@@ -21,6 +21,7 @@ const typeDefs = gql`
       user: User
     }
 
+    
     input CompensationInput {
       compensationId:ID
       userId:ID!
