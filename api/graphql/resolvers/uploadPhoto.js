@@ -90,6 +90,55 @@ const getPendingUploads = async (root, args, context, info) => {
     return uploads;
 }
 
+const getFlaggedUploads = async (root, args, context, info) => {
+
+    const uploads = await dbClient.db(dbName).collection("uploads").aggregate([
+        {
+            $lookup:{
+                from: "users",
+                localField : "memberId",
+                foreignField : "_id",
+                as : "member"
+            }
+        },
+        {
+            $lookup:{
+                from: "brands",
+                localField : "brandId",
+                foreignField : "_id",
+                as : "brand"
+            }
+        },
+        {
+            $lookup:{
+                from: "categories",
+                localField : "categoryId",
+                foreignField : "_id",
+                as : "category"
+            }
+        },
+        {
+            $lookup:{
+                from: "products",
+                localField : "productId",
+                foreignField : "_id",
+                as : "product"
+            }
+        },
+        { $match : { approved : null, flagged: true } }
+    ]).toArray();
+
+    for ( let upload of uploads ){
+        upload.brand = upload.brand[0];
+        upload.member = upload.member[0];
+        upload.category = upload.category[0];
+        upload.product = upload.product.length > 0 ? upload.product[0] : [];
+        upload.tags = upload.tags ? upload.tags : []
+    }
+
+    return uploads;
+}
+
 const getUserUploads =  async (root, args, context, info) => {
     if ( !args.userId ){
         return []
@@ -622,6 +671,18 @@ const validateUpload =  async (parent, args) => {
     return validateError;
 }
 
+const flagUploadedPhoto =  async (parent, args) => {
+    await dbClient.db(dbName).collection('uploads').updateOne(
+        { _id: new ObjectId(args.id) },
+        {
+            $set: {flagged: true},
+            $currentDate: { updatedAt: true }
+        }
+    );
+
+    return args.id;
+}
+
 module.exports = {
     queries: {
         getUploadedPhotos,
@@ -631,13 +692,15 @@ module.exports = {
         uploadsFilter,
         getApprovedNotCredited,
         getApprovedNotCreditedUploadedProducts,
-        getPendingUploads
+        getPendingUploads,
+        getFlaggedUploads
     },
     mutations: {
         addUploadedPhoto,
         updateUploadedPhoto,
         likeUploadedPhoto,
-        validateUpload
+        validateUpload,
+        flagUploadedPhoto
     },
     helper: {
         compensate

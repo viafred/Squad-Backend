@@ -11,6 +11,7 @@ const typeDefs = gql`
         uploadsSearch(searchParam: String, brandIds: String, uploadIds: String, categoryIds: String): [SearchUploadPhoto]
         uploadsFilter(filter: FilterInput): [SearchUploadPhoto]
         getPendingUploads: [UploadPhoto]
+        getFlaggedUploads: [UploadPhoto]
         getApprovedNotCredited: [UploadPhoto]
         getApprovedNotCreditedUploadedProducts: [UploadPhoto]
     }
@@ -41,6 +42,7 @@ const typeDefs = gql`
         productName: String
         productUrl: String
         likes: Int
+        flagged: Boolean
         member: User
         userLikes: [ID]
         brandName: String
@@ -103,6 +105,7 @@ const typeDefs = gql`
         updateUploadedPhoto(uploadPhoto: UploadPhotoInput!): String
         likeUploadedPhoto(id: ID, userId: ID): Boolean
         validateUpload(id: ID!): ValidateError
+        flagUploadedPhoto(id: ID!): String
     }
 `
 
