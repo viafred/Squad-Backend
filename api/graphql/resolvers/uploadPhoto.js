@@ -41,6 +41,55 @@ const getUploadedPhotos = async (root, args, context, info) => {
     return uploads;
 }
 
+const getPendingUploads = async (root, args, context, info) => {
+
+    const uploads = await dbClient.db(dbName).collection("uploads").aggregate([
+        {
+            $lookup:{
+                from: "users",
+                localField : "memberId",
+                foreignField : "_id",
+                as : "member"
+            }
+        },
+        {
+            $lookup:{
+                from: "brands",
+                localField : "brandId",
+                foreignField : "_id",
+                as : "brand"
+            }
+        },
+        {
+            $lookup:{
+                from: "categories",
+                localField : "categoryId",
+                foreignField : "_id",
+                as : "category"
+            }
+        },
+        {
+            $lookup:{
+                from: "products",
+                localField : "productId",
+                foreignField : "_id",
+                as : "product"
+            }
+        },
+        { $match : { approved : null } }
+    ]).toArray();
+
+    for ( let upload of uploads ){
+        upload.brand = upload.brand[0];
+        upload.member = upload.member[0];
+        upload.category = upload.category[0];
+        upload.product = upload.product.length > 0 ? upload.product[0] : [];
+        upload.tags = upload.tags ? upload.tags : []
+    }
+
+    return uploads;
+}
+
 const getUserUploads =  async (root, args, context, info) => {
     if ( !args.userId ){
         return []
@@ -418,6 +467,34 @@ const addUploadedPhoto =  async (parent, args) => {
     }
 }
 
+const updateUploadedPhoto =  async (parent, args) => {
+    try {
+        let photo = {
+            brandId: new ObjectId(args.uploadPhoto.brand._id),
+            categoryId: new ObjectId(args.uploadPhoto.category._id),
+            productId: new ObjectId(args.uploadPhoto.product._id),
+            memberId: new ObjectId(args.uploadPhoto.member._id),
+            productName: args.uploadPhoto.productName,
+            productUrl: args.uploadPhoto.productUrl,
+            brandName: args.uploadPhoto.brand.name,
+            categoryName: args.uploadPhoto.category.name,
+            approved: true
+        };
+
+        const response = await dbClient.db(dbName).collection('uploads').updateOne(
+            { _id: new ObjectId(args.uploadPhoto._id) },
+            {
+                $set: {...photo},
+                $currentDate: { updatedAt: true }
+            }
+        );
+
+        return args.uploadPhoto._id;
+    } catch (e) {
+        return e;
+    }
+}
+
 const likeUploadedPhoto =  async (parent, args) => {
     const upload = await dbClient.db(dbName).collection("uploads").findOne({_id: new ObjectId(args.id)});
     if ( upload && upload.userLikes && _.find(upload.userLikes, new ObjectId(args.userId)) ){
@@ -484,6 +561,67 @@ const compensate = async (payType, amount) => {
     }
 }
 
+const validateUpload =  async (parent, args) => {
+    const uploads = await dbClient.db(dbName).collection("uploads").aggregate([
+        {
+            $lookup:{
+                from: "products",
+                localField : "productId",
+                foreignField : "_id",
+                as : "product"
+            }
+        },
+        {
+            $lookup:{
+                from: "brands",
+                localField : "brandId",
+                foreignField : "_id",
+                as : "brand"
+            }
+        },
+        {
+            $lookup:{
+                from: "categories",
+                localField : "categoryId",
+                foreignField : "_id",
+                as : "category"
+            }
+        },
+        { $match : { _id : new ObjectId(args.id) } }
+    ]).toArray();
+
+    let validateError = {
+        brand: null,
+        category: null,
+        product: null,
+        errorCount: 0
+    }
+
+    const upload = uploads[0];
+    if ( upload ){
+        upload.brand = upload.brand[0];
+        upload.product = upload.product[0];
+        upload.category = upload.category[0];
+
+        if ( upload.brand.verified === undefined || upload.brand.verified === false ){
+            validateError['brand'] = `Unable to find '${upload.brand.name}' in the system. Or is not a verified Brand/Customer.`
+            validateError['errorCount'] += 1
+        }
+
+        if ( upload.category.verified === undefined || upload.category.verified === false ){
+            validateError['category'] = `Unable to find '${upload.category.name}' in the system. Or is not a verified Category.`
+            validateError['errorCount'] += 1
+        }
+
+        if ( !upload.product || upload.product && upload.product.verified === undefined || upload.product && upload.product.verified === false ){
+            validateError['product'] = `Unable to find '${upload.productName}' in the system. Or is not a verified Product.`
+            validateError['errorCount'] += 1
+        }
+    }
+
+    return validateError;
+}
+
 module.exports = {
     queries: {
         getUploadedPhotos,
@@ -492,11 +630,14 @@ module.exports = {
         uploadsSearch,
         uploadsFilter,
         getApprovedNotCredited,
-        getApprovedNotCreditedUploadedProducts
+        getApprovedNotCreditedUploadedProducts,
+        getPendingUploads
     },
     mutations: {
         addUploadedPhoto,
-        likeUploadedPhoto
+        updateUploadedPhoto,
+        likeUploadedPhoto,
+        validateUpload
     },
     helper: {
         compensate

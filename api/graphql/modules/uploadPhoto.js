@@ -10,6 +10,7 @@ const typeDefs = gql`
         getBrandUploads(brandId: String, userId: String): BrandUpload
         uploadsSearch(searchParam: String, brandIds: String, uploadIds: String, categoryIds: String): [SearchUploadPhoto]
         uploadsFilter(filter: FilterInput): [SearchUploadPhoto]
+        getPendingUploads: [UploadPhoto]
         getApprovedNotCredited: [UploadPhoto]
         getApprovedNotCreditedUploadedProducts: [UploadPhoto]
     }
@@ -32,25 +33,31 @@ const typeDefs = gql`
     }
 
     type UploadPhoto {
-        _id: ID!
+        _id: ID
         memberId: ID
-        brand: Brand!
-        category: Category!
-        productName: String!
-        productUrl: String!
+        brand: Brand
+        category: Category
+        product: Product
+        productName: String
+        productUrl: String
         likes: Int
         member: User
         userLikes: [ID]
         brandName: String
         categoryName: String
+        tags: [String]
     }
 
     input UploadPhotoInput {
-        brand: BrandInput!
-        category: CategoryInput!
-        productName: String!
-        productUrl: String!
-        userId: ID!
+        _id: ID
+        brand: BrandInput
+        category: CategoryInput
+        product: ProductInput
+        productName: String
+        productUrl: String
+        member: UserInput
+        tags: [String]
+        userId: ID
     }
 
     type SearchUser {
@@ -84,9 +91,18 @@ const typeDefs = gql`
         uploads: [UploadPhoto],
     }
 
+    type ValidateError {
+        brand: String,
+        category: String,
+        product: String,
+        errorCount: Int
+    }
+
     extend type Mutation {
         addUploadedPhoto(uploadPhoto: UploadPhotoInput!): String
+        updateUploadedPhoto(uploadPhoto: UploadPhotoInput!): String
         likeUploadedPhoto(id: ID, userId: ID): Boolean
+        validateUpload(id: ID!): ValidateError
     }
 `
 

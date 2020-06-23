@@ -10,7 +10,7 @@ const typeDefs = gql`
     }
 
     type Product {
-        _id: ID!
+        _id: ID
         brand: Brand
         category: Category
         productName: String
@@ -22,12 +22,12 @@ const typeDefs = gql`
 
     input ProductInput {
         _id: ID
-        brand: BrandInput!
-        category: CategoryInput!
-        productName: String!
-        productUrl: String!
-        customerId: String!
-        productTags: [String]!
+        brand: BrandInput
+        category: CategoryInput
+        productName: String
+        productUrl: String
+        customerId: String
+        productTags: [String]
     }
 
     type CategoryAndProduct {

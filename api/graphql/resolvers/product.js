@@ -106,6 +106,7 @@ const saveProduct =  async (parent, args) => {
             productTags: args.product.productTags,
             brandName: args.product.brand.name,
             categoryName: args.product.category.name,
+            verified: true,
             createdAt: new Date(),
             updatedAt: new Date()
         };
