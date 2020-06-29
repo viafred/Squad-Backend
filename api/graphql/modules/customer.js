@@ -12,6 +12,7 @@ const typeDefs = gql`
         getCustomerBrandsCategoriesProducts(customerId: String, brandIds:[String], categoryIds:[String], productIds: [String]): BrandCategoryProduct
         getCustomerProducts(customerId: String, brandIds:[String], categoryIds:[String], productIds: [String]): [Product]
         customers: [Customer]
+        getPendingCustomers: [Customer]
     }
 
     type CustomerGroup {
@@ -63,6 +64,8 @@ const typeDefs = gql`
         billingState: String
         billingZipcode: String
         brand: Brand
+        createdAt: Date
+        updateAt: Date
     }
 
     input CustomerInput {
@@ -93,6 +96,8 @@ const typeDefs = gql`
         billingState: String
         billingZipcode: String
         finishSteps: Boolean
+        status: String
+        provisioned: Boolean
     }
 
     input GroupInput {
@@ -113,6 +118,7 @@ const typeDefs = gql`
 
     extend type Mutation {
         saveCustomer(id:ID, customer: CustomerInput): Customer!
+        verifyCustomer(id:ID): String
         createGroup(data:GroupInput):String
         saveFeedback(data:FeedbackInput):String
     }

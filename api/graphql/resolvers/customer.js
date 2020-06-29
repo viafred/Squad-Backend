@@ -12,6 +12,27 @@ const customers = async (root, args, context, info) => {
     return customers;
 }
 
+const getPendingCustomers = async(root, args, context, info) => {
+    const customers = await dbClient.db(dbName).collection("customers").aggregate([
+        {
+            $lookup:{
+                from: "brands",
+                localField : "brandId",
+                foreignField : "_id",
+                as : "brand"
+            }
+        },
+        { $match : {$or: [{status: "pending"}, {status: "provisioned"}]}}
+    ]).toArray();
+
+
+    for ( let customer of customers ){
+        customer.brand = customer.brand[0];
+    }
+
+    return customers;
+}
+
 const getCustomer = async(root, args, context, info) => {
     const customers = await dbClient.db(dbName).collection("customers").aggregate([
         {
@@ -25,11 +46,14 @@ const getCustomer = async(root, args, context, info) => {
         { $match : { _id : new ObjectId(args.id) } }
     ]).limit(1).toArray();
 
+    if ( customers.length > 0 ){
+        let customer = customers[0];
+        customer.brand = customer.brand[0];
 
-    let customer = customers[0];
-    customer.brand = customer.brand[0];
+        return customer;
+    }
 
-    return customer;
+    return {}
 }
 
 const getCustomerCategoriesAndProducts =  async (root, args, context, info) => {
@@ -163,62 +187,109 @@ const getCustomerFeedbacks = async (root, args, context, info) => {
 }
 
 const saveCustomer =  async (parent, args) => {
-    let customerInput = JSON.parse(JSON.stringify(args.customer));
-    let _id = args.id ? new ObjectId(args.id) : null;
+    try {
+        let customerInput = JSON.parse(JSON.stringify(args.customer));
+        let _id = args.id ? new ObjectId(args.id) : null;
 
-    let brand = await dbClient.db(dbName).collection('brands').aggregate(
-        [
-            {
-                $project:
-                    {
-                        name: { $toLower: "$name" },
-                    }
-            },
-            { $match : { name : customerInput.companyBrand.toLowerCase() } }
-        ]
-    ).toArray();
+        let brand = await dbClient.db(dbName).collection('brands').aggregate(
+            [
+                {
+                    $project:
+                        {
+                            name: { $toLower: "$name" },
+                        }
+                },
+                { $match : { name : customerInput.companyBrand.toLowerCase() } }
+            ]
+        ).toArray();
 
-    if (brand.length > 0){
-        customerInput.brandId = new ObjectId(brand[0]._id);
+        if (brand.length > 0){
+            customerInput.brandId = new ObjectId(brand[0]._id);
 
+            await dbClient.db(dbName).collection('brands').updateOne(
+                { _id: new ObjectId(brand[0]._id) },
+                {
+                    $set: {verified: true},
+                    $currentDate: { updatedAt: true }
+                }
+            );
+        } else {
+            brand = await dbClient.db(dbName).collection('brands').insertOne({name: customerInput.companyBrand, verified: false});
+            customerInput.brandId = brand.insertedId;
+        }
+
+
+        let customerBrand = await dbClient.db(dbName).collection('customer_brands').findOne({ brandId: customerInput.brandId });
+        if ( !customerBrand ){
+            await dbClient.db(dbName).collection('customer_brands').insertOne({customerId: _id, brandId: customerInput.brandId, name: customerInput.companyBrand  });
+        }
+
+        delete customerInput._id;
+
+        let lastId = _id;
+        if ( _id ){
+            await dbClient.db(dbName).collection('customers').updateOne(
+                { _id: new ObjectId(_id) },
+                {
+                    $set: customerInput,
+                    $currentDate: { updatedAt: true }
+                }
+            );
+        } else {
+            customerInput.status = customerInput.status ? customerInput.status : 'pending'
+            customerInput.createdAt = new Date()
+            customerInput.updatedAt = new Date()
+
+            let customer = await dbClient.db(dbName).collection('customers').insertOne(customerInput);
+            lastId = customer.insertedId.toString();
+        }
+
+        return { _id: new ObjectId(lastId) };
+    } catch (e) {
+        return e;
+    }
+}
+
+const verifyCustomer =  async (parent, args) => {
+    try {
+        let _id = args.id ? new ObjectId(args.id) : null;
+
+        const customer = await dbClient.db(dbName).collection("customers").findOne({ _id : new ObjectId(args.id) });
+
+        //Verify Brand
         await dbClient.db(dbName).collection('brands').updateOne(
-            { _id: new ObjectId(brand[0]._id) },
+            { _id: new ObjectId(customer.brandId) },
             {
-                $set: {verified: true},
+                $set: { verified: true },
                 $currentDate: { updatedAt: true }
             }
         );
-    } else {
-        brand = await dbClient.db(dbName).collection('brands').insertOne({name: customerInput.companyBrand, verified: true});
 
-        customerInput.brandId = brand.insertedId;
-    }
+        //Verify Customer Categories
+        const customerCategories = await dbClient.db(dbName).collection("customer_categories").find({ customerId : new ObjectId(args.id) }).toArray();
+        let categoryIds = customerCategories.map(c => new ObjectId(c.categoryId) )
 
+        await dbClient.db(dbName).collection('categories').updateMany(
+            { _id: { $in: categoryIds } },
+            {
+                $set: {status: 'verified'},
+                $currentDate: { updatedAt: true }
+            }
+        );
 
-    let customerBrand = await dbClient.db(dbName).collection('customer_brands').findOne({ brandId: customerInput.brandId });
-    if ( !customerBrand ){
-        await dbClient.db(dbName).collection('customer_brands').insertOne({customerId: _id, brandId: customerInput.brandId, name: customerInput.companyBrand  });
-    }
-
-    delete customerInput._id;
-
-    let lastId = _id;
-    if ( _id ){
-
+        //Verify Customer
         await dbClient.db(dbName).collection('customers').updateOne(
             { _id: new ObjectId(_id) },
             {
-                $set: customerInput,
+                $set: {status: 'verified'},
                 $currentDate: { updatedAt: true }
             }
         );
-    } else {
-        customerInput.status = 'pending';
-        let customer = await dbClient.db(dbName).collection('customers').insertOne(customerInput);
-        lastId = customer.insertedId.toString();
-    }
 
-    return { _id: new ObjectId(lastId) };
+        return _id
+    } catch (e) {
+        return e;
+    }
 }
 
 const createGroup =  async (parent, args) => {
@@ -283,10 +354,12 @@ module.exports = {
         getCustomerBrandsCategoriesProducts,
         getCustomerProducts,
         getCustomerGroups,
-        getCustomerFeedbacks
+        getCustomerFeedbacks,
+        getPendingCustomers
     },
     mutations: {
         saveCustomer,
+        verifyCustomer,
         createGroup,
         saveFeedback
     },
