@@ -24,6 +24,42 @@ const activeCompensation = async (root, args, context, info) => {
   return null;
 }
 
+const getMemberCompensations = async (root, args, context, info) => {
+  const memberId = args.memberId;
+  let comps = await dbClient.db(dbName).collection("compensations").aggregate([
+    {
+      $lookup:{
+        from: "uploads",
+        localField : "uploadIds",
+        foreignField : "_id",
+        as : "uploads"
+      }
+    },
+    { $match : {"uploads.memberId": new ObjectId(memberId) } }
+  ]).toArray();
+
+  let uploads = []
+  for ( let comp of comps ){
+    uploads = comp.uploads.filter(u => u.memberId == memberId)
+    comp.totalCompensation = uploads.map(u => u.earnedAmount)
+    comp.totalCompensation = comp.totalCompensation.reduce((previous, next) => previous+next, 0)
+    comp.totalCompensation =  parseFloat(comp.totalCompensation+"").toFixed(2)
+  }
+
+  return comps
+}
+
+const getMemberTotalEarnings = async (root, args, context, info) => {
+  let compUploads = await getMemberCompensations(root, args, context, info)
+  let memberEarnings = {}
+  memberEarnings.uploads = compUploads.map(u => u.totalCompensation)
+  memberEarnings.uploads = memberEarnings.uploads.reduce((previous, next) => parseFloat(previous) + parseFloat(next), 0)
+  memberEarnings.offers = 0
+  //TODO
+
+  return memberEarnings
+}
+
 const compensationHistory = async (root, args, context, info) => {
   let comps = await dbClient.db(dbName).collection("compensations_history").aggregate([
     {
@@ -37,7 +73,7 @@ const compensationHistory = async (root, args, context, info) => {
   ]).toArray()
 
   let compsHistory = comps.map(c => ({...c, user: c.user[0]}))
-  
+
   return compsHistory
 }
 
@@ -101,7 +137,9 @@ const saveCompensation =  async (parent, args) => {
 module.exports = {
   queries: {
     activeCompensation,
-    compensationHistory
+    compensationHistory,
+    getMemberCompensations,
+    getMemberTotalEarnings
   },
   mutations: {
     saveCompensation

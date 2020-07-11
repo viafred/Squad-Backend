@@ -6,6 +6,13 @@ const typeDefs = gql`
     extend type Query {
       activeCompensation: Compensation
       compensationHistory:[Compensation]
+      getMemberCompensations(memberId: String): [Compensation]
+      getMemberTotalEarnings(memberId: String): TotalEarning
+    }
+
+    type TotalEarning {
+      uploads: Float
+      offers: Float
     }
 
     type Compensation {
@@ -18,10 +25,12 @@ const typeDefs = gql`
       userId: String
       active: Boolean
       totalCompensation: Float
+      memberCompensation: Float
       user: User
+      createdAt: Date
     }
 
-    
+
     input CompensationInput {
       compensationId:ID
       userId:ID!
