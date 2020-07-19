@@ -82,6 +82,8 @@ const typeDefs = gql`
     extend type Mutation {
         updateUser(id:ID, user: UserInput): User!
         lookbookit(data:LookbookInput):String
+        sendConfirmationEmail(id:ID):Boolean
+        updateUserStatus(id:ID):Boolean
     }
 `
 

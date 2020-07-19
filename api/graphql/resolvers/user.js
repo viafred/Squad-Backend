@@ -1,5 +1,7 @@
 const { dbClient, dbName } = require('../../config/mongo');
 const ObjectId = require('mongodb').ObjectId;
+const sgMail = require('@sendgrid/mail');
+const jwt = require('jsonwebtoken');
 
 const users = async (root, args, context, info) => {
     const usersRef = dbClient.db(dbName).collection("users");
@@ -141,6 +143,52 @@ const lookbookit =  async (parent, args) => {
     }
 }
 
+const updateUserStatus = async (parent, args) => {
+    try {
+        await dbClient.db(dbName).collection('users').updateOne(
+            { stitchId: args.id },
+            {
+                $set: {status: 'confirmed'},
+                $currentDate: { updatedAt: true }
+            }
+        );
+    } catch (e){
+        return e;
+    }
+
+    return true;
+}
+
+const sendConfirmationEmail = async (parent, args) => {
+    try {
+        let user = await dbClient.db(dbName).collection('users').findOne({stitchId: args.id});
+        let token = jwt.sign({id: args.id}, 'squadConfirmationEmailHashThatIsSuperSecure', { expiresIn: '1h' })
+
+        sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+        const msg = {
+            to: user.email,
+            from: {
+                name: "The SQUAD Team",
+                email: "fred@teammysquad.com"
+            },
+            templateId: "d-b4712b8325e74eab98976c4ba0bcd5b9",
+            dynamic_template_data: {
+                link: process.env.FRONTEND_URL + `confirm-email/${token}`,
+                name: user.displayName
+            }
+         };
+
+        console.log(msg)
+
+        await sgMail.send(msg);
+    } catch (e){
+        console.log(e)
+        return e;
+    }
+
+    return true;
+}
+
 module.exports = {
     queries: {
         users,
@@ -152,6 +200,8 @@ module.exports = {
     },
     mutations: {
         updateUser,
-        lookbookit
+        lookbookit,
+        updateUserStatus,
+        sendConfirmationEmail
     }
 }
