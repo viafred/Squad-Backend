@@ -448,6 +448,7 @@ const addUploadedPhoto =  async (parent, args) => {
             productUrl: args.uploadPhoto.productUrl,
             brandName: args.uploadPhoto.brand.name,
             categoryName: args.uploadPhoto.category.name,
+            approved: false,
             createdAt: new Date(),
             updatedAt: new Date()
         };
@@ -459,23 +460,26 @@ const addUploadedPhoto =  async (parent, args) => {
                     $project:
                         {
                             name: { $toLower: "$name" },
+                            verified: 1
                         }
                 },
                 { $match : { name : args.uploadPhoto.brand.name.toLowerCase() } }
             ]
         ).toArray();
 
+        let brand = null
         if (brands.length > 0){
+            brand = brands[0]
             photo.brandId = new ObjectId(brands[0]._id);
-            await dbClient.db(dbName).collection('brands').updateOne(
+            /*await dbClient.db(dbName).collection('brands').updateOne(
                 { _id: new ObjectId(brands[0]._id) },
                 {
                     $set: {verified: false, name: args.uploadPhoto.brand.name},
                     $currentDate: { updatedAt: true }
                 }
-            );
+            );*/
         } else {
-            let brand = await dbClient.db(dbName).collection('brands').insertOne(
+            brand = await dbClient.db(dbName).collection('brands').insertOne(
                 { name: args.uploadPhoto.brand.name, verified: false, createdAt: new Date(), updatedAt: new Date() });
             photo.brandId = brand.insertedId;
         }
@@ -487,27 +491,34 @@ const addUploadedPhoto =  async (parent, args) => {
                     $project:
                         {
                             name: { $toLower: "$name" },
+                            verified: 1
                         }
                 },
                 { $match : { name : args.uploadPhoto.category.name.toLowerCase() } }
             ]
         ).toArray();
 
+        let category = null
         if (categories.length > 0){
+            category = categories[0]
             photo.categoryId = new ObjectId(categories[0]._id);
-            await dbClient.db(dbName).collection('categories').updateOne(
+            /*await dbClient.db(dbName).collection('categories').updateOne(
                 { _id: new ObjectId(categories[0]._id) },
                 {
                     $set: {verified: false, name: args.uploadPhoto.category.name},
                     $currentDate: { updatedAt: true }
                 }
-            );
+            );*/
         } else {
-            let category = await dbClient.db(dbName).collection('categories').insertOne(
+            category = await dbClient.db(dbName).collection('categories').insertOne(
                 {name: args.uploadPhoto.category.name, verified: false, createdAt: new Date(), updatedAt: new Date()} );
             photo.categoryId = category.insertedId;
         }
 
+        console.log(brand)
+        console.log(category)
+        photo.approved = brand.verified === true && category.verified === true
+        console.log(photo)
         let upload = await dbClient.db(dbName).collection('uploads').insertOne(photo);
 
         return upload.insertedId.toString();
