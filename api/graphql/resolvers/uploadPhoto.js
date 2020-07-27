@@ -2,6 +2,7 @@ const { dbClient, dbName } = require('../../config/mongo');
 const ObjectId = require('mongodb').ObjectId;
 
 var _ = require('lodash');
+const { union } = require('lodash');
 
 const getUploadedPhotos = async (root, args, context, info) => {
 
@@ -440,21 +441,75 @@ const uploadsFilter = async (root, args, context, info) => {
 
 const addUploadedPhoto =  async (parent, args) => {
     try {
+        console.log('addUploadedPhoto')
+        console.log(args)
         let photo = {
             brandId: null,
             categoryId: null,
+            productId: null,
             memberId: new ObjectId(args.uploadPhoto.userId),
             productName: args.uploadPhoto.productName,
-            productUrl: args.uploadPhoto.productUrl,
             brandName: args.uploadPhoto.brand.name,
             categoryName: args.uploadPhoto.category.name,
+            productUrl: args.uploadPhoto.productUrl,
             approved: false,
             createdAt: new Date(),
             updatedAt: new Date()
         };
 
-        //Brands
-        let brands = await dbClient.db(dbName).collection('brands').aggregate(
+        let brand = null
+        if ( args.uploadPhoto.brand._id ){
+            brand = args.uploadPhoto.brand
+            photo.brandId = new ObjectId(args.uploadPhoto.brand._id)
+        } else {
+            brand = await dbClient.db(dbName).collection('brands').insertOne(
+                { name: args.uploadPhoto.brand.name, verified: false, createdAt: new Date(), updatedAt: new Date() });
+            photo.brandId = new ObjectId(brand.insertedId);
+        }
+
+        let category = null
+        if ( args.uploadPhoto.category._id ){
+            category = args.uploadPhoto.category
+            photo.categoryId = new ObjectId(args.uploadPhoto.category._id)
+        } else {
+            category = await dbClient.db(dbName).collection('categories').insertOne(
+                {name: args.uploadPhoto.category.name, verified: false, createdAt: new Date(), updatedAt: new Date()} );
+            photo.categoryId = new ObjectId(category.insertedId);
+        }
+
+        let product = null
+        if ( args.uploadPhoto.product._id ){
+            product = args.uploadPhoto.product
+            photo.productId = new ObjectId(args.uploadPhoto.product._id)
+            photo.productName = args.uploadPhoto.product.productName
+        } else {
+            product = await dbClient.db(dbName).collection('products').insertOne(
+                {
+                    brandId: new ObjectId(brand._id),
+                    categoryId: new ObjectId(category._id),
+                    productName: args.uploadPhoto.product.productName,
+                    productUrl: photo.productUrl,
+                    brandName: brand.name,
+                    categoryName: category.name,
+                    verified: false,
+                    createdAt: new Date(),
+                    updatedAt: new Date()
+                } );
+            photo.productId = new ObjectId(product.insertedId);
+            photo.productName = args.uploadPhoto.product.productName
+        }
+
+        console.log(brand)
+        console.log(category)
+        console.log(product)
+        photo.approved = brand.verified === true && category.verified === true && product.verified === true
+        console.log(photo)
+        let upload = await dbClient.db(dbName).collection('uploads').insertOne(photo);
+
+        return upload.insertedId.toString();
+
+        //Brands - Note: Leave here as an example
+        /*let brands = await dbClient.db(dbName).collection('brands').aggregate(
             [
                 {
                     $project:
@@ -466,62 +521,7 @@ const addUploadedPhoto =  async (parent, args) => {
                 { $match : { name : args.uploadPhoto.brand.name.toLowerCase() } }
             ]
         ).toArray();
-
-        let brand = null
-        if (brands.length > 0){
-            brand = brands[0]
-            photo.brandId = new ObjectId(brands[0]._id);
-            /*await dbClient.db(dbName).collection('brands').updateOne(
-                { _id: new ObjectId(brands[0]._id) },
-                {
-                    $set: {verified: false, name: args.uploadPhoto.brand.name},
-                    $currentDate: { updatedAt: true }
-                }
-            );*/
-        } else {
-            brand = await dbClient.db(dbName).collection('brands').insertOne(
-                { name: args.uploadPhoto.brand.name, verified: false, createdAt: new Date(), updatedAt: new Date() });
-            photo.brandId = brand.insertedId;
-        }
-
-        //Categories
-        let categories = await dbClient.db(dbName).collection('categories').aggregate(
-            [
-                {
-                    $project:
-                        {
-                            name: { $toLower: "$name" },
-                            verified: 1
-                        }
-                },
-                { $match : { name : args.uploadPhoto.category.name.toLowerCase() } }
-            ]
-        ).toArray();
-
-        let category = null
-        if (categories.length > 0){
-            category = categories[0]
-            photo.categoryId = new ObjectId(categories[0]._id);
-            /*await dbClient.db(dbName).collection('categories').updateOne(
-                { _id: new ObjectId(categories[0]._id) },
-                {
-                    $set: {verified: false, name: args.uploadPhoto.category.name},
-                    $currentDate: { updatedAt: true }
-                }
-            );*/
-        } else {
-            category = await dbClient.db(dbName).collection('categories').insertOne(
-                {name: args.uploadPhoto.category.name, verified: false, createdAt: new Date(), updatedAt: new Date()} );
-            photo.categoryId = category.insertedId;
-        }
-
-        console.log(brand)
-        console.log(category)
-        photo.approved = brand.verified === true && category.verified === true
-        console.log(photo)
-        let upload = await dbClient.db(dbName).collection('uploads').insertOne(photo);
-
-        return upload.insertedId.toString();
+        */
     } catch (e) {
         return e;
     }
