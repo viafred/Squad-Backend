@@ -77,7 +77,7 @@ const getPendingUploads = async (root, args, context, info) => {
                 as : "product"
             }
         },
-        { $match : { approved : null } }
+        { $match : { approved : null, $or: { approved: false } } }
     ]).toArray();
 
     for ( let upload of uploads ){
