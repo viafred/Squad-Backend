@@ -77,6 +77,11 @@ const compensationHistory = async (root, args, context, info) => {
   return compsHistory
 }
 
+const test = (parent, args) => {
+  console.log('test')
+  return 'tests'
+}
+
 /* MUTATIONS */
 const saveCompensation =  async (parent, args) => {
   try {
@@ -96,6 +101,9 @@ const saveCompensation =  async (parent, args) => {
     } else {
       //Deactivate Current Active Compensation
       const activeComp = await activeCompensation()
+      console.log('activeComp');
+      console.log(activeComp);
+
       if ( activeComp ){
         await dbClient.db(dbName).collection('compensations').updateOne(
           { _id: activeComp._id },
@@ -108,12 +116,15 @@ const saveCompensation =  async (parent, args) => {
 
       //Get Approved and not credited uploads
       //Compensate uploads
-      const compensatedResult = uploadResolvers.helper.compensate(args.data.payType, args.data.payAmount)
+      const compRes = await uploadResolvers.helper.compensate(args.data.payType, args.data.payAmount)
+
+      console.log('compensateResult');
+      console.log(compRes);
 
       compensation['active'] = true
       compensation['createdAt'] = new Date()
-      compensation['uploadIds'] = compensatedResult.uploadIds
-      compensation['totalCompensation'] = compensatedResult.totalCompensated
+      compensation['uploadIds'] = compRes.uploadIds
+      compensation['totalCompensation'] = compRes.totalCompensated
 
       comp = await dbClient.db(dbName).collection('compensations').insertOne(compensation);
       id = comp.insertedId.toString();
