@@ -1,4 +1,5 @@
 require('events').EventEmitter.defaultMaxListeners = Infinity
+const logger = require('./logger');
 
 const dotenv = require('dotenv');
 dotenv.config();
@@ -41,6 +42,7 @@ app.use((req, res, next) => {
 
 app.use(cors());
 app.use(express.urlencoded({ extended: false }));
+app.use(logger.pre);
 
 const server = new ApolloServer({
     modules: [
