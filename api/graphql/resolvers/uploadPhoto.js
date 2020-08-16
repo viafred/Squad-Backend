@@ -538,7 +538,7 @@ const updateUploadedPhoto =  async (parent, args) => {
             productUrl: args.uploadPhoto.productUrl,
             brandName: args.uploadPhoto.brand.name,
             categoryName: args.uploadPhoto.category.name,
-            approved: true
+            approved: args.uploadPhoto.approved ? args.uploadPhoto.approved : false
         };
 
         const response = await dbClient.db(dbName).collection('uploads').updateOne(
