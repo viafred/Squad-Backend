@@ -1,8 +1,10 @@
 const { dbClient, dbName } = require('../../config/mongo');
 const ObjectId = require('mongodb').ObjectId;
 
-var _ = require('lodash');
+const _ = require('lodash');
 const { union } = require('lodash');
+
+const productHelper = require('./product')
 
 const getUploadedPhotos = async (root, args, context, info) => {
 
@@ -499,9 +501,6 @@ const addUploadedPhoto =  async (parent, args) => {
             photo.productName = args.uploadPhoto.product.productName
         }
 
-        console.log(brand)
-        console.log(category)
-        console.log(product)
         photo.approved = brand.verified === true && category.verified === true && product.verified === true
         console.log(photo)
         let upload = await dbClient.db(dbName).collection('uploads').insertOne(photo);
@@ -541,13 +540,93 @@ const updateUploadedPhoto =  async (parent, args) => {
             approved: args.uploadPhoto.approved ? args.uploadPhoto.approved : false
         };
 
-        const response = await dbClient.db(dbName).collection('uploads').updateOne(
+        await dbClient.db(dbName).collection('uploads').updateOne(
             { _id: new ObjectId(args.uploadPhoto._id) },
             {
                 $set: {...photo},
                 $currentDate: { updatedAt: true }
             }
         );
+
+        return args.uploadPhoto._id;
+    } catch (e) {
+        return e;
+    }
+}
+
+const verifyUploadedPhoto =  async (parent, args) => {
+    try {
+        let photo = {
+            brandId: new ObjectId(args.uploadPhoto.brand._id),
+            categoryId: new ObjectId(args.uploadPhoto.category._id),
+            productId: new ObjectId(args.uploadPhoto.product._id),
+            memberId: new ObjectId(args.uploadPhoto.member._id),
+            productName: args.uploadPhoto.productName,
+            productUrl: args.uploadPhoto.productUrl,
+            brandName: args.uploadPhoto.brand.name,
+            categoryName: args.uploadPhoto.category.name,
+            approved: true
+        };
+
+        await dbClient.db(dbName).collection('uploads').updateOne(
+            { _id: new ObjectId(args.uploadPhoto._id) },
+            {
+                $set: {...photo},
+                $currentDate: { updatedAt: true }
+            }
+        );
+
+        console.log(args.uploadPhoto)
+
+        if ( args.uploadPhoto.brand.verified === true ){
+            //if brand is not verify, it needs to pass through Provision process
+            const brandsRef = dbClient.db(dbName).collection("customer_brands").aggregate([
+                {
+                    $lookup:{
+                        from: 'brands',
+                        localField: 'brandId',
+                        foreignField: '_id',
+                        as: 'brands'
+                    },
+                    $lookup:{
+                        from: 'customers',
+                        localField: 'customerId',
+                        foreignField: '_id',
+                        as: 'customers'
+                    },
+                },
+                { $match : { brandId: new ObjectId(args.uploadPhoto.brand._id) }}
+            ]);
+
+            const brandCustomers = await brandsRef.toArray();
+            const customer = brandCustomers[0].customers[0];
+
+            if ( customer ){
+                await productHelper.helper.addProductToCustomer(
+                    args.uploadPhoto.product._id,
+                    customer._id,
+                    args.uploadPhoto.brand._id,
+                    args.uploadPhoto.category._id,
+                    args.uploadPhoto.tags
+                )
+
+                if ( args.uploadPhoto.category.verified === false ){
+                    await dbClient.db(dbName).collection('categories').updateOne(
+                        { _id: new ObjectId(args.uploadPhoto.category._id) },
+                        {
+                            $set: { verified: true },
+                            $currentDate: { updatedAt: true }
+                        }
+                    );
+
+                    await dbClient.db(dbName).collection('customer_categories').insertOne({
+                        categoryId: new ObjectId(args.uploadPhoto.category._id),
+                        customerId: new ObjectId(customer._id),
+                        name: args.uploadPhoto.category.name
+                    });
+                }
+            }
+        }
 
         return args.uploadPhoto._id;
     } catch (e) {
@@ -713,7 +792,8 @@ module.exports = {
         updateUploadedPhoto,
         likeUploadedPhoto,
         validateUpload,
-        flagUploadedPhoto
+        flagUploadedPhoto,
+        verifyUploadedPhoto
     },
     helper: {
         compensate,

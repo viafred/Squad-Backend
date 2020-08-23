@@ -106,6 +106,7 @@ const typeDefs = gql`
     extend type Mutation {
         addUploadedPhoto(uploadPhoto: UploadPhotoInput!): String
         updateUploadedPhoto(uploadPhoto: UploadPhotoInput!): String
+        verifyUploadedPhoto(uploadPhoto: UploadPhotoInput!): String
         likeUploadedPhoto(id: ID, userId: ID): Boolean
         validateUpload(id: ID!): ValidateError
         flagUploadedPhoto(id: ID!): String

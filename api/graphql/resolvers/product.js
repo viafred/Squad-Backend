@@ -170,6 +170,26 @@ const removeProduct =  async (parent, args) => {
     }
 }
 
+const addProductToCustomer = async (id, customerId, brandId, categoryId, tags) => {
+    try {
+        await dbClient.db(dbName).collection('products').updateOne(
+            { _id: new ObjectId(id) },
+            {
+                $set: {
+                    verified: true,
+                    customerId: new ObjectId(customerId),
+                    brandId: new ObjectId(brandId),
+                    categoryId: new ObjectId(categoryId),
+                    productTags: tags || [],
+                },
+                $currentDate: { updatedAt: true }
+            }
+        );
+    } catch (e){
+        return e
+    }
+}
+
 module.exports = {
     queries: {
         getProducts,
@@ -179,5 +199,8 @@ module.exports = {
         addProduct,
         updateProduct,
         removeProduct
+    },
+    helper: {
+        addProductToCustomer,
     }
 }
