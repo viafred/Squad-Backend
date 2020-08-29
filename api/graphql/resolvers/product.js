@@ -170,17 +170,24 @@ const removeProduct =  async (parent, args) => {
     }
 }
 
-const addProductToCustomer = async (id, customerId, brandId, categoryId, tags) => {
+const addProductToCustomer = async (product, customer, brand, category, tags) => {
+    console.log(product)
+    console.log(customer)
+    console.log(brand)
+    console.log(category)
+
     try {
         await dbClient.db(dbName).collection('products').updateOne(
-            { _id: new ObjectId(id) },
+            { _id: new ObjectId(product._id) },
             {
                 $set: {
                     verified: true,
-                    customerId: new ObjectId(customerId),
-                    brandId: new ObjectId(brandId),
-                    categoryId: new ObjectId(categoryId),
+                    customerId: new ObjectId(customer._id),
+                    brandId: new ObjectId(brand._id),
+                    categoryId: new ObjectId(category._id),
                     productTags: tags || [],
+                    brandName: brand.name,
+                    categoryName: category.name
                 },
                 $currentDate: { updatedAt: true }
             }

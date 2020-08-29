@@ -17,6 +17,7 @@ const typeDefs = gql`
         productUrl: String
         productTags: [String]
         customer: Customer
+        verified: Boolean
         tags: [String]
     }
 

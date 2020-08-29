@@ -70,6 +70,7 @@ const typeDefs = gql`
 
     input CustomerInput {
         _id: String
+        brandId: String
         companyName: String
         companyAddress1: String
         companyAddress2: String

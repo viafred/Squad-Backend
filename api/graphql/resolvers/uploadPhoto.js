@@ -44,6 +44,55 @@ const getUploadedPhotos = async (root, args, context, info) => {
     return uploads;
 }
 
+const getUpload = async (root, {id}, context, info) => {
+
+    const uploads = await dbClient.db(dbName).collection("uploads").aggregate([
+        {
+            $lookup:{
+                from: "users",
+                localField : "memberId",
+                foreignField : "_id",
+                as : "member"
+            }
+        },
+        {
+            $lookup:{
+                from: "brands",
+                localField : "brandId",
+                foreignField : "_id",
+                as : "brand"
+            }
+        },
+        {
+            $lookup:{
+                from: "categories",
+                localField : "categoryId",
+                foreignField : "_id",
+                as : "category"
+            }
+        },
+        {
+            $lookup:{
+                from: "products",
+                localField : "productId",
+                foreignField : "_id",
+                as : "product"
+            }
+        },
+        { $match : {_id: new ObjectId(id) }}
+    ]).toArray();
+
+    for ( let upload of uploads ){
+        upload.brand = upload.brand[0];
+        upload.member = upload.member[0];
+        upload.category = upload.category[0];
+        upload.product = upload.product.length > 0 ? upload.product[0] : [];
+        upload.tags = upload.tags ? upload.tags : []
+    }
+
+    return uploads[0];
+}
+
 const getPendingUploads = async (root, args, context, info) => {
 
     const uploads = await dbClient.db(dbName).collection("uploads").aggregate([
@@ -578,53 +627,51 @@ const verifyUploadedPhoto =  async (parent, args) => {
 
         console.log(args.uploadPhoto)
 
-        if ( args.uploadPhoto.brand.verified === true ){
-            //if brand is not verify, it needs to pass through Provision process
-            const brandsRef = dbClient.db(dbName).collection("customer_brands").aggregate([
-                {
-                    $lookup:{
-                        from: 'brands',
-                        localField: 'brandId',
-                        foreignField: '_id',
-                        as: 'brands'
-                    },
-                    $lookup:{
-                        from: 'customers',
-                        localField: 'customerId',
-                        foreignField: '_id',
-                        as: 'customers'
-                    },
+        const brandsRef = dbClient.db(dbName).collection("customer_brands").aggregate([
+            {
+                $lookup:{
+                    from: 'brands',
+                    localField: 'brandId',
+                    foreignField: '_id',
+                    as: 'brands'
                 },
-                { $match : { brandId: new ObjectId(args.uploadPhoto.brand._id) }}
-            ]);
+                $lookup:{
+                    from: 'customers',
+                    localField: 'customerId',
+                    foreignField: '_id',
+                    as: 'customers'
+                },
+            },
+            { $match : { brandId: new ObjectId(args.uploadPhoto.brand._id) }}
+        ]);
 
-            const brandCustomers = await brandsRef.toArray();
-            const customer = brandCustomers[0].customers[0];
+        const brandCustomers = await brandsRef.toArray();
+        const customer = brandCustomers[0].customers[0];
 
-            if ( customer ){
-                await productHelper.helper.addProductToCustomer(
-                    args.uploadPhoto.product._id,
-                    customer._id,
-                    args.uploadPhoto.brand._id,
-                    args.uploadPhoto.category._id,
-                    args.uploadPhoto.tags
-                )
+        console.log(customer)
+        if ( customer ){
+            await productHelper.helper.addProductToCustomer(
+                args.uploadPhoto.product,
+                customer,
+                args.uploadPhoto.brand,
+                args.uploadPhoto.category,
+                args.uploadPhoto.tags
+            )
 
-                if ( args.uploadPhoto.category.verified === false ){
-                    await dbClient.db(dbName).collection('categories').updateOne(
-                        { _id: new ObjectId(args.uploadPhoto.category._id) },
-                        {
-                            $set: { verified: true },
-                            $currentDate: { updatedAt: true }
-                        }
-                    );
+            if ( args.uploadPhoto.category.verified === false ){
+                await dbClient.db(dbName).collection('categories').updateOne(
+                    { _id: new ObjectId(args.uploadPhoto.category._id) },
+                    {
+                        $set: { verified: true },
+                        $currentDate: { updatedAt: true }
+                    }
+                );
 
-                    await dbClient.db(dbName).collection('customer_categories').insertOne({
-                        categoryId: new ObjectId(args.uploadPhoto.category._id),
-                        customerId: new ObjectId(customer._id),
-                        name: args.uploadPhoto.category.name
-                    });
-                }
+                await dbClient.db(dbName).collection('customer_categories').insertOne({
+                    categoryId: new ObjectId(args.uploadPhoto.category._id),
+                    customerId: new ObjectId(customer._id),
+                    name: args.uploadPhoto.category.name
+                });
             }
         }
 
@@ -777,6 +824,7 @@ const flagUploadedPhoto =  async (parent, args) => {
 
 module.exports = {
     queries: {
+        getUpload,
         getUploadedPhotos,
         getUserUploads,
         getBrandUploads,

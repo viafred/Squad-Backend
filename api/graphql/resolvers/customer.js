@@ -191,6 +191,13 @@ const saveCustomer =  async (parent, args) => {
         let customerInput = JSON.parse(JSON.stringify(args.customer));
         let _id = args.id ? new ObjectId(args.id) : null;
 
+        let match = {}
+        if ( !customerInput.brandId ){
+            match = { name : customerInput.companyBrand.toLowerCase() }
+        } else {
+            match = { _id : new ObjectId(customerInput.brandId) }
+        }
+
         let brand = await dbClient.db(dbName).collection('brands').aggregate(
             [
                 {
@@ -199,7 +206,7 @@ const saveCustomer =  async (parent, args) => {
                             name: { $toLower: "$name" },
                         }
                 },
-                { $match : { name : customerInput.companyBrand.toLowerCase() } }
+                { $match : match }
             ]
         ).toArray();
 
@@ -216,12 +223,6 @@ const saveCustomer =  async (parent, args) => {
         } else {
             brand = await dbClient.db(dbName).collection('brands').insertOne({name: customerInput.companyBrand, verified: false});
             customerInput.brandId = brand.insertedId;
-        }
-
-
-        let customerBrand = await dbClient.db(dbName).collection('customer_brands').findOne({ brandId: customerInput.brandId });
-        if ( !customerBrand ){
-            await dbClient.db(dbName).collection('customer_brands').insertOne({customerId: _id, brandId: customerInput.brandId, name: customerInput.companyBrand  });
         }
 
         delete customerInput._id;
@@ -242,6 +243,11 @@ const saveCustomer =  async (parent, args) => {
 
             let customer = await dbClient.db(dbName).collection('customers').insertOne(customerInput);
             lastId = customer.insertedId.toString();
+        }
+
+        let customerBrand = await dbClient.db(dbName).collection('customer_brands').findOne({ brandId: customerInput.brandId });
+        if ( !customerBrand ){
+            await dbClient.db(dbName).collection('customer_brands').insertOne({customerId: new ObjectId(lastId), brandId: customerInput.brandId, name: customerInput.companyBrand  });
         }
 
         return { _id: new ObjectId(lastId) };
