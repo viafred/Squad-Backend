@@ -5,6 +5,10 @@ const brandResolvers = require('../resolvers/brand');
 const categoryResolvers = require('../resolvers/category');
 const productResolvers = require('../resolvers/product');
 
+const { Stitch, UserPasswordAuthProviderClient, UserPasswordCredential } = require('mongodb-stitch-server-sdk');
+const stitchClient = Stitch.initializeDefaultAppClient('squad-rpgkc');
+const emailPasswordClient = stitchClient.auth.getProviderClient(UserPasswordAuthProviderClient.factory);
+
 const customers = async (root, args, context, info) => {
     const customersRef = dbClient.db(dbName).collection("customers");
     const customers = await customersRef.find({}).toArray();
@@ -226,6 +230,36 @@ const saveCustomer =  async (parent, args) => {
         }
 
         delete customerInput._id;
+
+        //Now if NO userId, we need to create one so the customer can login
+        if ( !customerInput.userId ){
+            await emailPasswordClient.registerWithEmail(customerInput.username, customerInput.password)
+            const credential = new UserPasswordCredential(customerInput.username, customerInput.password)
+            await stitchClient.auth.loginWithCredential(credential)
+            const userAuth = stitchClient.auth.user;
+
+            const createdAt = new Date();
+            const updatedAt = new Date();
+
+            const data = {
+                displayName: customerInput.companyName,
+                stitchId: userAuth.id,
+                email: customerInput.email,
+                firstName: customerInput.firstName,
+                lastName: customerInput.firstName,
+                name: customerInput.title,
+                createdAt,
+                updatedAt,
+                role: 'customer',
+            };
+
+            let userRef = await dbClient.db(dbName).collection('users').insertOne(data);
+            user = await dbClient.db(dbName).collection('users').findOne({_id: userRef.insertedId});
+
+            customerInput.userId = new Object(user._id);
+
+            stitchClient.auth.logoutUserWithId(userAuth.id);
+        }
 
         let lastId = _id;
         if ( _id ){

@@ -98,7 +98,9 @@ const typeDefs = gql`
         billingZipcode: String
         finishSteps: Boolean
         status: String
-        provisioned: Boolean
+        provisioned: Boolean,
+        username: String,
+        password: String
     }
 
     input GroupInput {
