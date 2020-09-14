@@ -28,6 +28,7 @@ const typeDefs = gql`
         productName: String
         productUrl: String
         customerId: String
+        verified: Boolean
         productTags: [String]
     }
 
