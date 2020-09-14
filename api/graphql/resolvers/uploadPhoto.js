@@ -536,12 +536,12 @@ const addUploadedPhoto =  async (parent, args) => {
         } else {
             product = await dbClient.db(dbName).collection('products').insertOne(
                 {
-                    brandId: new ObjectId(brand._id),
-                    categoryId: new ObjectId(category._id),
+                    brandId: new ObjectId(photo.brandId),
+                    categoryId: new ObjectId(photo.categoryId),
                     productName: args.uploadPhoto.product.productName,
                     productUrl: photo.productUrl,
-                    brandName: brand.name,
-                    categoryName: category.name,
+                    brandName: photo.brandName,
+                    categoryName: photo.categoryName,
                     verified: false,
                     createdAt: new Date(),
                     updatedAt: new Date()
