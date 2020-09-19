@@ -161,7 +161,8 @@ const updateUserStatus = async (parent, args) => {
 
 const sendConfirmationEmail = async (parent, args) => {
     try {
-        let user = await dbClient.db(dbName).collection('users').findOne({stitchId: args.id});
+        let user = await dbClient.db(dbName).collection('users').findOne({$or: [{stitchId: args.id}, {email: args.id}]});
+        console.log(user)
         let token = jwt.sign({id: args.id}, 'squadConfirmationEmailHashThatIsSuperSecure', { expiresIn: '1h' })
 
         sgMail.setApiKey(process.env.SENDGRID_API_KEY);
