@@ -6,7 +6,7 @@ const categoryResolvers = require('../resolvers/category');
 const productResolvers = require('../resolvers/product');
 
 const { Stitch, UserPasswordAuthProviderClient, UserPasswordCredential } = require('mongodb-stitch-server-sdk');
-const stitchClient = Stitch.initializeDefaultAppClient('squad-rpgkc');
+const stitchClient = Stitch.initializeDefaultAppClient(process.env.REALM_APP_ID);
 const emailPasswordClient = stitchClient.auth.getProviderClient(UserPasswordAuthProviderClient.factory);
 
 const customers = async (root, args, context, info) => {
