@@ -146,7 +146,7 @@ const lookbookit =  async (parent, args) => {
 const updateUserStatus = async (parent, args) => {
     try {
         await dbClient.db(dbName).collection('users').updateOne(
-            { stitchId: args.id },
+            {$or: [{stitchId: args.id}, {email: args.id}]},
             {
                 $set: {status: 'confirmed'},
                 $currentDate: { updatedAt: true }
