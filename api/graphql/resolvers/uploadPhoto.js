@@ -702,8 +702,7 @@ const compensateUploads = async(amount) => {
     try {
         const uploads = await dbClient.db(dbName).collection("uploads").find({ approved: true, credited: null }).toArray();
         const uploadIds = uploads.map(u => (new ObjectId(u._id)));
-        console.log('compensateUploads');
-        console.log(uploadIds);
+
         await dbClient.db(dbName).collection("uploads").updateMany(
             { _id: {$in: uploadIds} },
             { $set: { credited: true, earnedAmount: amount }}

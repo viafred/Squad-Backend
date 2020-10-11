@@ -1,9 +1,12 @@
 const { dbClient, dbName } = require('../../config/mongo');
 const ObjectId = require('mongodb').ObjectId;
+const moment = require('moment'); // require
 
 const uploadResolvers = require('../resolvers/uploadPhoto');
 
 const activeCompensation = async (root, args, context, info) => {
+  let oDate = new Date()
+
   let comp = await dbClient.db(dbName).collection("compensations").aggregate([
     {
       $lookup:{
@@ -13,15 +16,14 @@ const activeCompensation = async (root, args, context, info) => {
         as : "user"
       }
     },
-    { $match : {active: true} }
+    /*{ $match : { startDate: { $lt: oDate }, expirationDate: { $gte: oDate }, payType: "upload"  } },*/
+    { $sort : { createdAt : -1 } }
   ]).toArray();
 
   if ( comp && comp[0] ){
     comp[0]['user'] = comp[0]['user'][0]
     return comp[0]
   }
-
-  return null;
 }
 
 const getMemberCompensations = async (root, args, context, info) => {
@@ -77,11 +79,6 @@ const compensationHistory = async (root, args, context, info) => {
   return compsHistory
 }
 
-const test = (parent, args) => {
-  console.log('test')
-  return 'tests'
-}
-
 /* MUTATIONS */
 const saveCompensation =  async (parent, args) => {
   try {
@@ -90,42 +87,17 @@ const saveCompensation =  async (parent, args) => {
       payNum: args.data.payNum,
       payType: args.data.payType,
       payAmount: args.data.payAmount,
+      uploadIds: [],
       totalCompensation: 0,
       startDate: new Date(),
-      expirationDate: new Date(args.data.expiration)
+      expirationDate: new Date(args.data.expiration),
+      createdAt: new Date()
     };
 
     let id = null;
     if ( args.data.compensationId ){
         //nothing to be done YET I believe
     } else {
-      //Deactivate Current Active Compensation
-      const activeComp = await activeCompensation()
-      console.log('activeComp');
-      console.log(activeComp);
-
-      if ( activeComp ){
-        await dbClient.db(dbName).collection('compensations').updateOne(
-          { _id: activeComp._id },
-          {
-              $set: {active: false},
-              $currentDate: { updatedAt: true }
-          }
-        );
-      }
-
-      //Get Approved and not credited uploads
-      //Compensate uploads
-      const compRes = await uploadResolvers.helper.compensate(args.data.payType, args.data.payAmount)
-
-      console.log('compensateResult');
-      console.log(compRes);
-
-      compensation['active'] = true
-      compensation['createdAt'] = new Date()
-      compensation['uploadIds'] = compRes.uploadIds
-      compensation['totalCompensation'] = compRes.totalCompensated
-
       comp = await dbClient.db(dbName).collection('compensations').insertOne(compensation);
       id = comp.insertedId.toString();
 
@@ -135,14 +107,127 @@ const saveCompensation =  async (parent, args) => {
         createdAt: new Date()
       }
 
-      delete compensationHistory['active']
       compHistory = await dbClient.db(dbName).collection('compensations_history').insertOne(compensationHistory);
     }
 
+    await compensateAllUploads()
+    await compensateAllProducts()
     return id;
   } catch (e) {
       return e;
   }
+}
+
+/* HELPER */
+const availableUploadCompensation = async (oDate) => {
+  let mDate = moment(oDate)
+  let sDate = mDate.format("YYYY-MM-DDT23:59:59")
+
+  let comp = await dbClient.db(dbName).collection("compensations").aggregate([
+    {
+      $lookup:{
+        from: "users",
+        localField : "userId",
+        foreignField : "_id",
+        as : "user"
+      }
+    },
+    { $match : { startDate: { $lte: new Date(sDate) }, expirationDate: { $gte: new Date(sDate) }, payType: "upload"  } },
+    { $sort : { createdAt : -1 } }
+  ]).toArray();
+
+  if ( comp && comp[0] ){
+    comp[0]['user'] = comp[0]['user'][0]
+    return comp[0]
+  }
+
+  return null;
+}
+
+const availableProductCompensation = async (oDate) => {
+  let mDate = moment(oDate)
+  let sDate = mDate.format("YYYY-MM-DDT23:59:59")
+
+  let comp = await dbClient.db(dbName).collection("compensations").aggregate([
+    {
+      $lookup:{
+        from: "users",
+        localField : "userId",
+        foreignField : "_id",
+        as : "user"
+      }
+    },
+    { $match : { startDate: { $lte: new Date(sDate) }, expirationDate: { $gte: new Date(sDate) }, payType: "product"  } },
+    { $sort : { createdAt : -1 } }
+  ]).toArray();
+
+  if ( comp && comp[0] ){
+    comp[0]['user'] = comp[0]['user'][0]
+    return comp[0]
+  }
+
+  return null;
+}
+
+const compensateAllUploads = async () => {
+  //Get Approved and not credited uploads
+  const uploads = await dbClient.db(dbName).collection("uploads").find({ approved: true, credited: null }).toArray();
+
+  uploads.forEach(async (upload) => {
+    const activeComp = await availableUploadCompensation(upload.createdAt)
+    console.log('upload', upload);
+    console.log('activeComp', activeComp);
+
+    if ( activeComp ){
+      let totalCompensated = activeComp.totalCompensation
+
+      await dbClient.db(dbName).collection("uploads").updateOne(
+        { _id: new ObjectId(upload._id) },
+        { $set: { credited: true, earnedAmount: activeComp.payAmount }}
+      )
+
+      totalCompensated = totalCompensated + activeComp.payAmount
+
+      console.log('totalCompensated', totalCompensated);
+
+      await dbClient.db(dbName).collection("compensations").updateOne(
+        { _id: new ObjectId(activeComp._id) },
+        { "$set": { totalCompensation: totalCompensated }, "$push": { "uploadIds": {"$each": [ new ObjectId(upload._id) ] }} }
+      )
+    }
+
+  })
+}
+
+const compensateAllProducts = async () => {
+  const uploads = await dbClient.db(dbName).collection("uploads").find({ approved: true, credited: null, productId: {$ne: null} }).toArray();
+
+  uploads.forEach(async (upload) => {
+    const activeComp = await availableProductCompensation(upload.createdAt)
+    console.log('upload', upload);
+    console.log('activeComp', activeComp);
+
+    if ( activeComp ){
+      let totalCompensated = activeComp.totalCompensation
+      let uploadIds = activeComp.uploadIds ? activeComp.uploadIds : []
+
+      await dbClient.db(dbName).collection("uploads").updateOne(
+        { _id: new ObjectId(upload._id) },
+        { $set:  { credited: true, earnedAmount: activeComp.payAmount } }
+      )
+
+      totalCompensated = totalCompensated + activeComp.payAmount
+      uploadIds.push(new ObjectId(upload._id))
+
+      console.log('totalCompensated', totalCompensated);
+
+      await dbClient.db(dbName).collection("compensations").updateOne(
+        { _id: new ObjectId(activeComp._id) },
+        { "$set": { totalCompensation: totalCompensated }, "$push": { "uploadIds": {"$each": [ new ObjectId(upload._id) ] }} }
+      )
+    }
+
+  })
 }
 
 module.exports = {
@@ -154,5 +239,10 @@ module.exports = {
   },
   mutations: {
     saveCompensation
+  },
+  helper: {
+    availableUploadCompensation,
+    compensateAllUploads,
+    compensateAllProducts,
   }
 }
