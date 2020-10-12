@@ -118,6 +118,24 @@ const saveCompensation =  async (parent, args) => {
   }
 }
 
+const compensateUploads =  async (parent, args) => {
+  try {
+    await compensateAllUploads();
+    return 'ok'
+  } catch (e){
+    return e;
+  }
+}
+
+const compensateProducts =  async (parent, args) => {
+  try {
+    await compensateAllProducts();
+    return 'ok'
+  } catch (e){
+    return e;
+  }
+}
+
 /* HELPER */
 const availableUploadCompensation = async (oDate) => {
   let mDate = moment(oDate)
@@ -238,7 +256,9 @@ module.exports = {
     getMemberTotalEarnings
   },
   mutations: {
-    saveCompensation
+    saveCompensation,
+    compensateUploads,
+    compensateProducts
   },
   helper: {
     availableUploadCompensation,

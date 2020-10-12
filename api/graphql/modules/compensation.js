@@ -42,6 +42,8 @@ const typeDefs = gql`
 
     extend type Mutation {
       saveCompensation(data:CompensationInput):String
+      compensateUploads(id:String):String
+      compensateProducts(id:String):String
     }
 `
 
