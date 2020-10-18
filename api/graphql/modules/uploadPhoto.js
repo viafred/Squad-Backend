@@ -86,6 +86,8 @@ const typeDefs = gql`
         brand: SearchBrand
         category: SearchBrand
         productName: String
+        brandName:String
+        categoryName:String
         productUrl: String
         userLikes: [String]
         member: SearchUser
