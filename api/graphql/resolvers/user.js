@@ -51,7 +51,8 @@ const getSpotlightMembers = async (root, args, context, info) => {
                 as : "category"
             }
         },
-        { $sort : { createdAt : -1 } }
+        { $sort : { createdAt: -1 } },
+        { $match : { approved: true } },
     ]).limit(4).toArray();
 
     for ( let upload of uploads ){
