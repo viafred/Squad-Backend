@@ -63,6 +63,78 @@ const getSpotlightMembers = async (root, args, context, info) => {
     return uploads;
 }
 
+const isFollowing = async (root, { followerId, followedId }, context, info) => {
+    const followers = await dbClient.db(dbName).collection("followers").aggregate([
+        { $match : { followerId : new ObjectId(followerId), followedId : new ObjectId(followedId) } },
+    ]).toArray();
+
+    if ( followers.length > 0 ){
+        return true
+    }
+
+    return false;
+}
+
+const getFollowers = async (root, { id }, context, info) => {
+    const followers = await dbClient.db(dbName).collection("followers").aggregate([
+        {
+            $lookup:{
+                from: "users",
+                localField : "followerId",
+                foreignField : "_id",
+                as : "follower"
+            }
+        },
+        {
+            $lookup:{
+                from: "users",
+                localField : "followedId",
+                foreignField : "_id",
+                as : "followed"
+            }
+        },
+        { $match : { followerId : new ObjectId(id) } },
+        { $sort : { createdAt : -1 } }
+    ]).toArray();
+
+    for ( let follower of followers ){
+        follower.follower = follower.follower[0];
+        follower.followed = follower.followed[0];
+    }
+
+    return followers;
+}
+
+const getFolloweds = async (root, { id }, context, info) => {
+    const followers = await dbClient.db(dbName).collection("followers").aggregate([
+        {
+            $lookup:{
+                from: "users",
+                localField : "followerId",
+                foreignField : "_id",
+                as : "follower"
+            }
+        },
+        {
+            $lookup:{
+                from: "users",
+                localField : "followedId",
+                foreignField : "_id",
+                as : "followed"
+            }
+        },
+        { $match : { followedId : new ObjectId(id) } },
+        { $sort : { createdAt : -1 } }
+    ]).toArray();
+
+    for ( let follower of followers ){
+        follower.follower = follower.follower[0];
+        follower.followed = follower.followed[0];
+    }
+
+    return followers;
+}
+
 const getLookbookByUserId = async (root, { userId }, context, info) => {
     const lookbook = await dbClient.db(dbName).collection("users_lookbook").aggregate([
         { "$lookup": {
@@ -190,6 +262,24 @@ const sendConfirmationEmail = async (parent, args) => {
     return true;
 }
 
+const follow = async (parent, args) => {
+    try {
+        let follower = {
+            followerId: new ObjectId(args.followerId),
+            followedId: new ObjectId(args.followedId),
+            createdAt: new Date(),
+            updatedAt: new Date()
+        };
+
+        follower = await dbClient.db(dbName).collection('followers').insertOne(follower);
+
+        return follower.insertedId.toString();
+    } catch (e){
+        console.log(e)
+        return e;
+    }
+}
+
 module.exports = {
     queries: {
         users,
@@ -197,12 +287,16 @@ module.exports = {
         getSpotlightMembers,
         getUserByFirebaseId,
         getLookbook,
-        getLookbookByUserId
+        getLookbookByUserId,
+        getFollowers,
+        getFolloweds,
+        isFollowing
     },
     mutations: {
         updateUser,
         lookbookit,
         updateUserStatus,
-        sendConfirmationEmail
+        sendConfirmationEmail,
+        follow
     }
 }

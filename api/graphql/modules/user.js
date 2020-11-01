@@ -10,6 +10,9 @@ const typeDefs = gql`
         getUserByFirebaseId(firebaseId: ID!): User
         getLookbookByUserId(userId: ID!): [Lookbook]
         getLookbook(id: ID!): Lookbook
+        getFollowers(id:ID): [Follower]
+        getFolloweds(id:ID): [Follower]
+        isFollowing(followerId:ID, followedId: ID): Boolean
     }
 
     scalar Date
@@ -28,6 +31,15 @@ const typeDefs = gql`
         paymentMethod:String
         paymentUsername:String
     }
+
+    type Follower {
+        _id: ID
+        followerId: ID
+        followedId: ID
+        follower: User
+        followed: User
+    }
+
 
     type Lookbook {
         _id: ID
@@ -84,6 +96,7 @@ const typeDefs = gql`
         lookbookit(data:LookbookInput):String
         sendConfirmationEmail(id:ID):Boolean
         updateUserStatus(id:ID):Boolean
+        follow(followerId:ID, followedId:ID): String
     }
 `
 
