@@ -16,9 +16,7 @@ const getBrands = async (root, args, context, info) => {
             brandIds.push(new ObjectId(brandId));
         }
 
-        find = { brandId: { $in: brandIds }, 'customer.companyLogo': {$ne: null}, 'customer.companyBanner': {$ne: null} };
-    } else {
-        find =  { 'customer.companyLogo': {$ne: null}, 'customer.companyBanner': {$ne: null}  } ;
+        find = { brandId: { $in: brandIds } };
     }
 
     const brands = await brandsRef.aggregate([
