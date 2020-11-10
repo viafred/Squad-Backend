@@ -42,7 +42,7 @@ const getBrands = async (root, args, context, info) => {
     if ( brands.length > 0 ){
         for ( let brand of brands ){
             brand._id = brand.brandId;
-            brand.verified = brand.brands[0].verified;
+            brand.verified = brand.brands && brand.brands[0] && brand.brands[0].verified;
             brand.banner = brand.customer && brand.customer.length > 0 ? brand.customer[0].companyBanner : '';
             brand.logo = brand.customer && brand.customer.length > 0 ? brand.customer[0].companyLogo : '';
         }
