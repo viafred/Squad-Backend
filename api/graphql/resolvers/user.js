@@ -26,6 +26,14 @@ const getUserByFirebaseId = async (root, { firebaseId }, context, info) => {
 
 
 const getSpotlightMembers = async (root, args, context, info) => {
+    let find = {
+        approved: true
+    }
+
+    if ( args.brandId ){
+        find = { brandId: { $in: [new ObjectId(args.brandId)] } };
+    }
+
     const uploads = await dbClient.db(dbName).collection("uploads").aggregate([
         {
             $lookup:{
@@ -52,7 +60,7 @@ const getSpotlightMembers = async (root, args, context, info) => {
             }
         },
         { $sort : { createdAt: -1 } },
-        { $match : { approved: true } },
+        { $match : find },
     ]).limit(4).toArray();
 
     for ( let upload of uploads ){
