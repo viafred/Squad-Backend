@@ -81,6 +81,7 @@ const typeDefs = gql`
         role: String
         paymentMethod:String
         paymentUsername:String
+        status:String
     }
 
     input LookbookInput {
