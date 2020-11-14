@@ -185,9 +185,6 @@ const getLookbook = async (root, { id }, context, info) => {
 /* MUTATIONS */
 const updateUser = async (parent, args) => {
     let userInput = JSON.parse(JSON.stringify(args.user));
-    if ( userInput.dob ){
-        userInput.dob = new Date(userInput.dob);
-    }
 
     try {
         await dbClient.db(dbName).collection('users').updateOne(
