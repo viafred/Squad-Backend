@@ -608,7 +608,6 @@ const verifyUploadedPhoto =  async (parent, args) => {
         let photo = {
             brandId: new ObjectId(args.uploadPhoto.brand._id),
             categoryId: new ObjectId(args.uploadPhoto.category._id),
-            productId: new ObjectId(args.uploadPhoto.product._id),
             memberId: new ObjectId(args.uploadPhoto.member._id),
             productName: args.uploadPhoto.productName,
             productUrl: args.uploadPhoto.productUrl,
@@ -616,6 +615,27 @@ const verifyUploadedPhoto =  async (parent, args) => {
             categoryName: args.uploadPhoto.category.name,
             approved: true
         };
+
+        if (args.uploadPhoto.product._id){
+            photo.productId = new ObjectId(args.uploadPhoto.product._id)
+        } else {
+            let product = await dbClient.db(dbName).collection('products').insertOne(
+                {
+                    brandId: new ObjectId(args.uploadPhoto.brand._id),
+                    categoryId: new ObjectId(args.uploadPhoto.category._id),
+                    productName: args.uploadPhoto.product.productName,
+                    productUrl: args.uploadPhoto.productUrl,
+                    brandName: args.uploadPhoto.brand.name,
+                    categoryName: args.uploadPhoto.category.name,
+                    tags: args.uploadPhoto.tags,
+                    verified: true,
+                    createdAt: new Date(),
+                    updatedAt: new Date()
+                } );
+
+            photo.productId = new ObjectId(product.insertedId);
+            photo.productName = args.uploadPhoto.product.productName
+        }
 
         await dbClient.db(dbName).collection('uploads').updateOne(
             { _id: new ObjectId(args.uploadPhoto._id) },
@@ -646,32 +666,33 @@ const verifyUploadedPhoto =  async (parent, args) => {
         ]);
 
         const brandCustomers = await brandsRef.toArray();
-        const customer = brandCustomers[0].customers[0];
+        if ( brandCustomers && brandCustomers.length > 0 ){
+            const customer = brandCustomers[0].customers[0];
+            console.log(customer)
+            if ( customer ){
+                await productHelper.helper.addProductToCustomer(
+                    args.uploadPhoto.product,
+                    customer,
+                    args.uploadPhoto.brand,
+                    args.uploadPhoto.category,
+                    args.uploadPhoto.tags
+                )
 
-        console.log(customer)
-        if ( customer ){
-            await productHelper.helper.addProductToCustomer(
-                args.uploadPhoto.product,
-                customer,
-                args.uploadPhoto.brand,
-                args.uploadPhoto.category,
-                args.uploadPhoto.tags
-            )
+                if ( args.uploadPhoto.category.verified === false ){
+                    await dbClient.db(dbName).collection('categories').updateOne(
+                        { _id: new ObjectId(args.uploadPhoto.category._id) },
+                        {
+                            $set: { verified: true },
+                            $currentDate: { updatedAt: true }
+                        }
+                    );
 
-            if ( args.uploadPhoto.category.verified === false ){
-                await dbClient.db(dbName).collection('categories').updateOne(
-                    { _id: new ObjectId(args.uploadPhoto.category._id) },
-                    {
-                        $set: { verified: true },
-                        $currentDate: { updatedAt: true }
-                    }
-                );
-
-                await dbClient.db(dbName).collection('customer_categories').insertOne({
-                    categoryId: new ObjectId(args.uploadPhoto.category._id),
-                    customerId: new ObjectId(customer._id),
-                    name: args.uploadPhoto.category.name
-                });
+                    await dbClient.db(dbName).collection('customer_categories').insertOne({
+                        categoryId: new ObjectId(args.uploadPhoto.category._id),
+                        customerId: new ObjectId(customer._id),
+                        name: args.uploadPhoto.category.name
+                    });
+                }
             }
         }
 
