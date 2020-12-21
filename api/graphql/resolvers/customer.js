@@ -190,6 +190,22 @@ const getCustomerFeedbacks = async (root, args, context, info) => {
     return customerFeedbacks
 }
 
+const getCustomerQuestions = async (root, args, context, info) => {
+    let customerQuestions = await dbClient.db(dbName).collection("customer_questions").aggregate([
+        {
+            $lookup:{
+                from: "customer",
+                localField : "customerId",
+                foreignField : "_id",
+                as : "customer"
+            }
+        },
+        { $match : { customerId : new ObjectId(args.customerId) } }
+    ]).toArray();
+
+    return customerQuestions
+}
+
 const saveCustomer =  async (parent, args) => {
     try {
         let customerInput = JSON.parse(JSON.stringify(args.customer));
@@ -384,6 +400,33 @@ const saveFeedback =  async (parent, args) => {
     }
 }
 
+const saveQuestion =  async (parent, args) => {
+    try {
+        let question = {
+            customerId: new ObjectId(args.question.customerId),
+            question: args.question.question,
+            answers: args.question.answers,
+            createdAt: new Date(),
+            updatedAt: new Date()
+        };
+
+        if ( args.question._id ){
+            await dbClient.db(dbName).collection("customer_questions").updateOne(
+                { _id: new ObjectId(args.question._id) },
+                {
+                    $set: {answers: args.question.answers, question: question.question},
+                    $currentDate: { updatedAt: true }
+                });
+
+            return args.question._id
+        } else {
+            question = await dbClient.db(dbName).collection('customer_questions').insertOne(question);
+            return question.insertedId.toString();
+        }
+    } catch (e) {
+        return e;
+    }
+}
 
 module.exports = {
     queries: {
@@ -395,13 +438,15 @@ module.exports = {
         getCustomerProducts,
         getCustomerGroups,
         getCustomerFeedbacks,
-        getPendingCustomers
+        getPendingCustomers,
+        getCustomerQuestions
     },
     mutations: {
         saveCustomer,
         verifyCustomer,
         createGroup,
-        saveFeedback
+        saveFeedback,
+        saveQuestion
     },
     helper: {
         getGroups

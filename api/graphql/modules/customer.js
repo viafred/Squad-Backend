@@ -13,8 +13,18 @@ const typeDefs = gql`
         getCustomerProducts(customerId: String, brandIds:[String], categoryIds:[String], productIds: [String]): [Product]
         customers: [Customer]
         getPendingCustomers: [Customer]
+        getCustomerQuestions(customerId:ID): [CustomerQuestion]
     }
 
+    type CustomerQuestion {
+        _id: ID
+        customerId: ID
+        question: String
+        answers: [String]
+        createdAt: Date
+        updatedAt: Date
+    }
+    
     type CustomerGroup {
         _id: ID
         customerId: ID
@@ -118,12 +128,20 @@ const typeDefs = gql`
         groupId:String
         status:String
     }
+    
+    input QuestionInput {
+        _id:ID,
+        customerId:ID,
+        question: String
+        answers: [String]
+    }
 
     extend type Mutation {
         saveCustomer(id:ID, customer: CustomerInput): Customer!
         verifyCustomer(id:ID): String
         createGroup(data:GroupInput):String
         saveFeedback(data:FeedbackInput):String
+        saveQuestion(question:QuestionInput!):String
     }
 `
 
