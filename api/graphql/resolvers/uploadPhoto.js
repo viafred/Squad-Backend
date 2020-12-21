@@ -606,8 +606,6 @@ const updateUploadedPhoto =  async (parent, args) => {
 const verifyUploadedPhoto =  async (parent, args) => {
     try {
         let photo = {
-            brandId: new ObjectId(args.uploadPhoto.brand._id),
-            categoryId: new ObjectId(args.uploadPhoto.category._id),
             memberId: new ObjectId(args.uploadPhoto.member._id),
             productName: args.uploadPhoto.productName,
             productUrl: args.uploadPhoto.productUrl,
@@ -616,25 +614,74 @@ const verifyUploadedPhoto =  async (parent, args) => {
             approved: true
         };
 
+        //BRANDS
+        if ( args.uploadPhoto.brand._id ){
+            photo.brandId = new ObjectId(args.uploadPhoto.brand._id)
+        } else {
+            let brands = await dbClient.db(dbName).collection('brands').aggregate(
+                [{$project:{name: { $toLower: "$name" }}},{ $match : { name : args.uploadPhoto.brand.name.toLowerCase() } }]
+            ).toArray();
+
+            if (brands.length > 0){
+                photo.brandId = new ObjectId(brands[0]._id)
+                photo.brandName = args.uploadPhoto.brand.name
+            } else {
+                let brand = await dbClient.db(dbName).collection('brands').insertOne(
+                    { name: args.uploadPhoto.brand.name, verified: true, createdAt: new Date(), updatedAt: new Date() });
+                photo.brandId = new ObjectId(brand.insertedId);
+                photo.brandName = args.uploadPhoto.brand.name
+            }
+        }
+
+        //CATEGORY
+        if ( args.uploadPhoto.category._id ){
+            photo.categoryId = new ObjectId(args.uploadPhoto.category._id)
+        } else {
+            let categories = await dbClient.db(dbName).collection('categories').aggregate(
+                [{$project:{name: { $toLower: "$name" }}},{ $match : { name : args.uploadPhoto.category.name.toLowerCase() } }]
+            ).toArray();
+
+            if (categories.length > 0){
+                photo.categoryId = new ObjectId(categories[0]._id)
+                photo.categoryName = args.uploadPhoto.category.name
+            } else {
+                let category = await dbClient.db(dbName).collection('categories').insertOne(
+                    { name: args.uploadPhoto.category.name, verified: true, createdAt: new Date(), updatedAt: new Date() });
+                photo.categoryId = new ObjectId(category.insertedId);
+                photo.categoryName = args.uploadPhoto.category.name
+            }
+        }
+
+        //PRODUCT
         if (args.uploadPhoto.product._id){
             photo.productId = new ObjectId(args.uploadPhoto.product._id)
         } else {
-            let product = await dbClient.db(dbName).collection('products').insertOne(
-                {
-                    brandId: new ObjectId(args.uploadPhoto.brand._id),
-                    categoryId: new ObjectId(args.uploadPhoto.category._id),
-                    productName: args.uploadPhoto.product.productName,
-                    productUrl: args.uploadPhoto.productUrl,
-                    brandName: args.uploadPhoto.brand.name,
-                    categoryName: args.uploadPhoto.category.name,
-                    tags: args.uploadPhoto.tags,
-                    verified: true,
-                    createdAt: new Date(),
-                    updatedAt: new Date()
-                } );
+            let products = await dbClient.db(dbName).collection('products').aggregate(
+                [{$project:{productName: { $toLower: "$productName" }}},{ $match : { productName : args.uploadPhoto.product.productName.toLowerCase() } }]
+            ).toArray();
 
-            photo.productId = new ObjectId(product.insertedId);
-            photo.productName = args.uploadPhoto.product.productName
+            if (products.length > 0){
+                photo.productId = new ObjectId(products[0]._id);
+                photo.productName = args.uploadPhoto.product.productName
+            } else {
+                let product = await dbClient.db(dbName).collection('products').insertOne(
+                    {
+                        brandId: new ObjectId(args.uploadPhoto.brand._id),
+                        categoryId: new ObjectId(args.uploadPhoto.category._id),
+                        productName: args.uploadPhoto.product.productName,
+                        productUrl: args.uploadPhoto.productUrl,
+                        brandName: args.uploadPhoto.brand.name,
+                        categoryName: args.uploadPhoto.category.name,
+                        tags: args.uploadPhoto.tags,
+                        verified: true,
+                        createdAt: new Date(),
+                        updatedAt: new Date()
+                    } );
+
+                photo.productId = new ObjectId(product.insertedId);
+                photo.productName = args.uploadPhoto.product.productName
+            }
+
         }
 
         await dbClient.db(dbName).collection('uploads').updateOne(
