@@ -13,6 +13,7 @@ const typeDefs = gql`
         getCustomerProducts(customerId: String, brandIds:[String], categoryIds:[String], productIds: [String]): [Product]
         customers: [Customer]
         getPendingCustomers: [Customer]
+        getCustomerQuestion(questionId:ID):CustomerQuestion
         getCustomerQuestions(customerId:ID): [CustomerQuestion]
     }
 

@@ -190,6 +190,20 @@ const getCustomerFeedbacks = async (root, args, context, info) => {
     return customerFeedbacks
 }
 
+const getCustomerQuestion = async (root, args, context, info) => {
+    const questions = await dbClient.db(dbName).collection("customer_questions")
+        .find({_id : new ObjectId(args.questionId)})
+        .limit(1)
+        .toArray();
+
+    if ( questions.length > 0 ){
+        let question = questions[0];
+        return question;
+    }
+
+    return {}
+}
+
 const getCustomerQuestions = async (root, args, context, info) => {
     let customerQuestions = await dbClient.db(dbName).collection("customer_questions").aggregate([
         {
@@ -439,7 +453,8 @@ module.exports = {
         getCustomerGroups,
         getCustomerFeedbacks,
         getPendingCustomers,
-        getCustomerQuestions
+        getCustomerQuestions,
+        getCustomerQuestion
     },
     mutations: {
         saveCustomer,
