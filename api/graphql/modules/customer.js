@@ -36,12 +36,9 @@ const typeDefs = gql`
     type CustomerFeedback {
         _id: ID
         customerId: ID
-        title: String
-        copy: String
-        publishType: String
-        groupId: String
-        group: CustomerGroup
-        status: String
+        questions: [CustomerQuestion]
+        uploads: [UploadPhoto]
+        offerType: String
         createdAt: Date
         updatedAt: Date
     }
@@ -122,12 +119,9 @@ const typeDefs = gql`
 
     input FeedbackInput {
         customerId:ID
-        feedbackId:String
-        title:String
-        copy:String
-        publishType:String
-        groupId:String
-        status:String
+        uploads:[String]
+        questions:[String]
+        offerType:String
     }
     
     input QuestionInput {

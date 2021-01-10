@@ -174,20 +174,52 @@ const getCustomerGroups = async (root, args, context, info) => {
 }
 
 const getCustomerFeedbacks = async (root, args, context, info) => {
-    let customerFeedbacks = await dbClient.db(dbName).collection("customer_feedbacks").aggregate([
+    let customerFeedbacksUploads = await dbClient.db(dbName).collection("customer_feedback_uploads").aggregate([
         {
             $lookup:{
-                from: "customer_groups",
-                localField : "groupId",
+                from: "customer_questions",
+                localField : "questions",
                 foreignField : "_id",
-                as : "group"
+                as : "questions"
             }
         },
+        {
+            $lookup: {
+                from: 'uploads',
+                let: { "uploads": "$uploads" },
+                pipeline: [
+                    { $match: { "$expr": { "$in": [ "$_id", "$$uploads" ] } } },
+                    {
+                        $lookup: {
+                            from: 'users',
+                            let: { "memberId": "$memberId" },
+                            pipeline: [
+                                { "$match": { "$expr": { "$eq": [ "$_id", "$$memberId" ] } } },
+                            ],
+                            as: "member"
+                        }},
+                    {
+                        $addFields: {
+                            member: { "$arrayElemAt": [ "$member", 0 ] }
+                    }}
+                ],
+                as: "uploads"
+            }
+        },
+        {
+            $addFields: {
+                "questions": "$questions",
+                "uploads": "$uploads",
+                "offerType": "upload"
+            }
+        },
+
         { $match : { customerId : new ObjectId(args.customerId) } }
     ]).toArray();
 
-    customerFeedbacks = customerFeedbacks.map(f => ({...f, group: f.group[0]}))
-    return customerFeedbacks
+    console.log(customerFeedbacksUploads)
+
+    return customerFeedbacksUploads
 }
 
 const getCustomerQuestion = async (root, args, context, info) => {
@@ -382,33 +414,22 @@ const createGroup =  async (parent, args) => {
 
 const saveFeedback =  async (parent, args) => {
     try {
-        let id = null;
-        if ( args.data.feedbackId ){
-            const response = await dbClient.db(dbName).collection('customer_feedbacks').updateOne(
-                { _id: new ObjectId(args.data.feedbackId) },
-                {
-                    $set: {status: args.data.status},
-                    $currentDate: { updatedAt: true }
-                }
-            );
-            id = args.data.feedbackId;
-        } else {
-            let feedback = {
+        const offerType = args.data.offerType
+
+        if ( offerType === 'upload' ){
+            let feedBack = {
                 customerId: new ObjectId(args.data.customerId),
-                title: args.data.title,
-                copy: args.data.copy,
-                publishType: args.data.publishType,
-                status: 'unpublished',
-                groupId: args.data.groupId ? new ObjectId(args.data.groupId) : null,
+                uploads: args.data.uploads.map(u => new ObjectId(u)),
+                questions: args.data.questions.map(q => new ObjectId(q)),
                 createdAt: new Date(),
                 updatedAt: new Date()
             };
 
-            group = await dbClient.db(dbName).collection('customer_feedbacks').insertOne(feedback);
-            id = group.insertedId.toString();
+            const _feedback = await dbClient.db(dbName).collection('customer_feedback_uploads').insertOne(feedBack);
+            return _feedback.insertedId.toString();
         }
 
-        return id;
+        return 'ok';
     } catch (e) {
         return e;
     }
