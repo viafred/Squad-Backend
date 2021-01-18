@@ -217,9 +217,40 @@ const getCustomerFeedbacks = async (root, args, context, info) => {
         { $match : { customerId : new ObjectId(args.customerId) } }
     ]).toArray();
 
+
+    let customerFeedbacksInventory = await dbClient.db(dbName).collection("customer_feedback_inventory").aggregate([
+        {
+            $lookup:{
+                from: "customer_questions",
+                localField : "questions",
+                foreignField : "_id",
+                as : "questions"
+            }
+        },
+        {
+            $lookup:{
+                from: "products",
+                localField : "products",
+                foreignField : "_id",
+                as : "products"
+            }
+        },
+        {
+            $addFields: {
+                "questions": "$questions",
+                "products": { "$arrayElemAt": [ "$products", 0 ] },
+                "inventory": "$inventory",
+                "offerType": "inventory"
+            }
+        },
+
+        { $match : { customerId : new ObjectId(args.customerId) } }
+    ]).toArray();
+
+
     console.log(customerFeedbacksUploads)
 
-    return customerFeedbacksUploads
+    return [...customerFeedbacksUploads]
 }
 
 const getCustomerQuestion = async (root, args, context, info) => {
@@ -415,6 +446,7 @@ const createGroup =  async (parent, args) => {
 const saveFeedback =  async (parent, args) => {
     try {
         const offerType = args.data.offerType
+        let insertedId = null
 
         if ( offerType === 'upload' ){
             let feedBack = {
@@ -426,10 +458,22 @@ const saveFeedback =  async (parent, args) => {
             };
 
             const _feedback = await dbClient.db(dbName).collection('customer_feedback_uploads').insertOne(feedBack);
-            return _feedback.insertedId.toString();
+            insertedId = _feedback.insertedId.toString()
+
+        } else if ( offerType === 'inventory' ){
+            let feedBack = {
+                customerId: new ObjectId(args.data.customerId),
+                products: args.data.products.map(u => new ObjectId(u)),
+                questions: args.data.questions.map(q => new ObjectId(q)),
+                createdAt: new Date(),
+                updatedAt: new Date()
+            };
+
+            const _feedback = await dbClient.db(dbName).collection('customer_feedback_inventory').insertOne(feedBack);
+            insertedId = _feedback.insertedId.toString()
         }
 
-        return 'ok';
+        return insertedId
     } catch (e) {
         return e;
     }
