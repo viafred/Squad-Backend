@@ -445,35 +445,19 @@ const createGroup =  async (parent, args) => {
 
 const saveFeedback =  async (parent, args) => {
     try {
-        const offerType = args.data.offerType
-        let insertedId = null
 
-        if ( offerType === 'upload' ){
-            let feedBack = {
-                customerId: new ObjectId(args.data.customerId),
-                uploads: args.data.uploads.map(u => new ObjectId(u)),
-                questions: args.data.questions.map(q => new ObjectId(q)),
-                createdAt: new Date(),
-                updatedAt: new Date()
-            };
+        let feedBack = {
+            customerId: new ObjectId(args.data.customerId),
+            uploads: args.data.uploads.map(u => new ObjectId(u)),
+            questions: args.data.questions.map(q => new ObjectId(q)),
+            offerType: args.data.offerType,
+            createdAt: new Date(),
+            updatedAt: new Date()
+        };
 
-            const _feedback = await dbClient.db(dbName).collection('customer_feedback_uploads').insertOne(feedBack);
-            insertedId = _feedback.insertedId.toString()
+        const _feedback = await dbClient.db(dbName).collection('customer_feedback').insertOne(feedBack);
 
-        } else if ( offerType === 'inventory' ){
-            let feedBack = {
-                customerId: new ObjectId(args.data.customerId),
-                products: args.data.products.map(u => new ObjectId(u)),
-                questions: args.data.questions.map(q => new ObjectId(q)),
-                createdAt: new Date(),
-                updatedAt: new Date()
-            };
-
-            const _feedback = await dbClient.db(dbName).collection('customer_feedback_inventory').insertOne(feedBack);
-            insertedId = _feedback.insertedId.toString()
-        }
-
-        return insertedId
+        return _feedback.insertedId.toString()
     } catch (e) {
         return e;
     }

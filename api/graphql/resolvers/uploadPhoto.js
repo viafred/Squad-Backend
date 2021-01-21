@@ -311,7 +311,7 @@ const getBrandUploads =  async (root, args, context, info) => {
 }
 
 const uploadsSearch = async (root, args, context, info) => {
-    let { searchParam, brandIds, uploadIds, categoryIds } = args;
+    let { searchParam, brandIds, uploadIds, categoryIds, productIds } = args;
 
     let $match = { $match: {} };
     const $sort = { $sort: { score: { $meta: "textScore" } } };
@@ -338,6 +338,16 @@ const uploadsSearch = async (root, args, context, info) => {
         }
 
         $match.$match._id = { $in: $uploadIds }
+    }
+
+    if ( productIds && productIds != '-' ){
+        productIds = productIds.split(',');
+        let $productIds = [];
+        for ( let productId of productIds ){
+            $productIds.push(new ObjectId(productId));
+        }
+
+        $match.$match.productId = { $in: $productIds }
     }
 
     if ( categoryIds && categoryIds != '-' ){
