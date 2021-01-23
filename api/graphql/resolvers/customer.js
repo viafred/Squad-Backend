@@ -174,7 +174,7 @@ const getCustomerGroups = async (root, args, context, info) => {
 }
 
 const getCustomerFeedbacks = async (root, args, context, info) => {
-    let customerFeedbacksUploads = await dbClient.db(dbName).collection("customer_feedback_uploads").aggregate([
+    let customerFeedbacksUploads = await dbClient.db(dbName).collection("customer_feedback").aggregate([
         {
             $lookup:{
                 from: "customer_questions",
@@ -216,39 +216,6 @@ const getCustomerFeedbacks = async (root, args, context, info) => {
 
         { $match : { customerId : new ObjectId(args.customerId) } }
     ]).toArray();
-
-
-    let customerFeedbacksInventory = await dbClient.db(dbName).collection("customer_feedback_inventory").aggregate([
-        {
-            $lookup:{
-                from: "customer_questions",
-                localField : "questions",
-                foreignField : "_id",
-                as : "questions"
-            }
-        },
-        {
-            $lookup:{
-                from: "products",
-                localField : "products",
-                foreignField : "_id",
-                as : "products"
-            }
-        },
-        {
-            $addFields: {
-                "questions": "$questions",
-                "products": { "$arrayElemAt": [ "$products", 0 ] },
-                "inventory": "$inventory",
-                "offerType": "inventory"
-            }
-        },
-
-        { $match : { customerId : new ObjectId(args.customerId) } }
-    ]).toArray();
-
-
-    console.log(customerFeedbacksUploads)
 
     return [...customerFeedbacksUploads]
 }
