@@ -38,6 +38,7 @@ const typeDefs = gql`
         customerId: ID
         questions: [CustomerQuestion]
         uploads: [UploadPhoto]
+        productUrl: String
         offerType: String
         createdAt: Date
         updatedAt: Date

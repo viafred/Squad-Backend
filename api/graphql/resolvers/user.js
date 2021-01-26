@@ -182,6 +182,54 @@ const getLookbook = async (root, { id }, context, info) => {
     return lookbook;
 }
 
+const getUserFeedbacks = async (root, args, context, info) => {
+    let customerFeedbacksUploads = await dbClient.db(dbName).collection("customer_feedback").aggregate([
+        {
+            $lookup:{
+                from: "customer_questions",
+                localField : "questions",
+                foreignField : "_id",
+                as : "questions"
+            }
+        },
+        {
+            $lookup: {
+                from: 'uploads',
+                let: { "uploads": "$uploads" },
+                pipeline: [
+                    { $match: { "$expr": { "$in": [ "$_id", "$$uploads" ] } } },
+                    {
+                        $lookup: {
+                            from: 'users',
+                            let: { "memberId": "$memberId" },
+                            pipeline: [
+                                { "$match": { "$expr": { "$eq": [ "$_id", "$$memberId" ] } } },
+                            ],
+                            as: "member"
+                        }},
+                    {
+                        $addFields: {
+                            member: { "$arrayElemAt": [ "$member", 0 ] }
+                        }}
+                ],
+                as: "uploads"
+            }
+        },
+        {
+            $addFields: {
+                "questions": "$questions",
+                "uploads": "$uploads",
+                "offerType": "upload",
+                "productUrl": { "$arrayElemAt": [ "$uploads.productUrl", 0 ] }
+            }
+        },
+
+        { $match : { 'uploads.member._id' : new ObjectId(args.id) } }
+    ]).toArray();
+
+    return [...customerFeedbacksUploads]
+}
+
 /* MUTATIONS */
 const updateUser = async (parent, args) => {
     let userInput = JSON.parse(JSON.stringify(args.user));
@@ -291,7 +339,7 @@ module.exports = {
         users,
         user,
         getSpotlightMembers,
-        getUserByFirebaseId,
+        getUserFeedbacks,
         getLookbook,
         getLookbookByUserId,
         getFollowers,

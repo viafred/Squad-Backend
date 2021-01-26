@@ -13,6 +13,7 @@ const typeDefs = gql`
         getFollowers(id:ID): [Follower]
         getFollowings(id:ID): [Follower]
         isFollowing(userId1:ID, userId2: ID): Boolean
+        getUserFeedbacks(id: ID): [CustomerFeedback]
     }
 
     scalar Date
