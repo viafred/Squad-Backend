@@ -184,6 +184,30 @@ const getCustomerFeedbacks = async (root, args, context, info) => {
             }
         },
         {
+            $lookup:{
+                from: "brands",
+                localField : "brandId",
+                foreignField : "_id",
+                as : "brandIds"
+            }
+        },
+        {
+            $lookup:{
+                from: "categories",
+                localField : "categoryId",
+                foreignField : "_id",
+                as : "categoryIds"
+            }
+        },
+        {
+            $lookup:{
+                from: "uploads",
+                localField : "uploadId",
+                foreignField : "_id",
+                as : "uploadIds"
+            }
+        },
+        {
             $lookup: {
                 from: 'uploads',
                 let: { "uploads": "$uploads" },
@@ -210,7 +234,10 @@ const getCustomerFeedbacks = async (root, args, context, info) => {
             $addFields: {
                 "questions": "$questions",
                 "uploads": "$uploads",
-                "offerType": "upload"
+                "offerType": "upload",
+                "brand": { "$arrayElemAt": [ "$brandIds", 0 ] },
+                "category": { "$arrayElemAt": [ "$categoryIds", 0 ] },
+                "upload": { "$arrayElemAt": [ "$uploadIds", 0 ] }
             }
         },
 
@@ -415,6 +442,9 @@ const saveFeedback =  async (parent, args) => {
 
         let feedBack = {
             customerId: new ObjectId(args.data.customerId),
+            brandId: args.data.brandId && new ObjectId(args.data.brandId) || null,
+            categoryId: args.data.categoryId && new ObjectId(args.data.categoryId) || null,
+            uploadId: args.data.uploadId && new ObjectId(args.data.uploadId) || null,
             uploads: args.data.uploads.map(u => new ObjectId(u)),
             questions: args.data.questions.map(q => new ObjectId(q)),
             offerType: args.data.offerType,

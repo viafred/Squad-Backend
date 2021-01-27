@@ -36,6 +36,9 @@ const typeDefs = gql`
     type CustomerFeedback {
         _id: ID
         customerId: ID
+        brand: Brand
+        category: Category
+        upload: UploadPhoto
         questions: [CustomerQuestion]
         uploads: [UploadPhoto]
         productUrl: String
@@ -120,6 +123,9 @@ const typeDefs = gql`
 
     input FeedbackInput {
         customerId:ID
+        brandId:ID
+        categoryId:ID
+        uploadId:ID
         uploads:[String]
         questions:[String]
         offerType:String
