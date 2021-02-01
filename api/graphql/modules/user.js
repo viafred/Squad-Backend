@@ -92,6 +92,17 @@ const typeDefs = gql`
         uploadIds:[String]
         photoURL:String
     }
+    
+    input AnswerFeedbackQuestionsInput {
+        questionId:ID!
+        answer:String
+    }
+    
+    input AnswerFeedbackInput {
+        feedbackId:ID!
+        userId:ID!
+        answers: [AnswerFeedbackQuestionsInput]
+    }
 
     extend type Mutation {
         updateUser(id:ID, user: UserInput): User!
@@ -99,6 +110,7 @@ const typeDefs = gql`
         sendConfirmationEmail(id:ID):Boolean
         updateUserStatus(id:ID):Boolean
         follow(userId1:ID, userId2:ID): String
+        answerFeedback(data:AnswerFeedbackInput):String 
     }
 `
 

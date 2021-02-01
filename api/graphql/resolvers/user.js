@@ -193,6 +193,14 @@ const getUserFeedbacks = async (root, args, context, info) => {
             }
         },
         {
+            $lookup:{
+                from: "feedback_answers",
+                localField : "_id",
+                foreignField : "customerFeedbackId",
+                as : "feedbackAnswers"
+            }
+        },
+        {
             $lookup: {
                 from: 'uploads',
                 let: { "uploads": "$uploads" },
@@ -224,7 +232,8 @@ const getUserFeedbacks = async (root, args, context, info) => {
             }
         },
 
-        { $match : { 'uploads.member._id' : new ObjectId(args.id) } }
+        { $match : { 'uploads.member._id' : new ObjectId(args.id) } },
+        { $match : { 'feedbackAnswers.0' : { "$exists": false } } }
     ]).toArray();
 
     return [...customerFeedbacksUploads]
@@ -334,6 +343,24 @@ const follow = async (parent, args) => {
     }
 }
 
+const answerFeedback =  async (parent, args) => {
+    try {
+        let answerFeedback = {
+            customerFeedbackId: new ObjectId(args.data.feedbackId),
+            userId: new ObjectId(args.data.userId),
+            answers: args.data.answers.map(a => ({ ...a,  questionId: new ObjectId(a.questionId)})),
+            createdAt: new Date(),
+            updatedAt: new Date()
+        };
+
+        answerFeedback = await dbClient.db(dbName).collection('feedback_answers').insertOne(answerFeedback);
+
+        return answerFeedback.insertedId.toString();
+    } catch (e) {
+        return e;
+    }
+}
+
 module.exports = {
     queries: {
         users,
@@ -351,6 +378,7 @@ module.exports = {
         lookbookit,
         updateUserStatus,
         sendConfirmationEmail,
-        follow
+        follow,
+        answerFeedback
     }
 }
