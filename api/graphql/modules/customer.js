@@ -15,6 +15,7 @@ const typeDefs = gql`
         getPendingCustomers: [Customer]
         getCustomerQuestion(questionId:ID):CustomerQuestion
         getCustomerQuestions(customerId:ID): [CustomerQuestion]
+        getFeedbackAnswers(feedbackId:ID): CustomerFeedbackAnswers
     }
 
     type CustomerQuestion {
@@ -46,7 +47,45 @@ const typeDefs = gql`
         createdAt: Date
         updatedAt: Date
     }
+    
+    type CustomerFeedbackAnswers {
+        _id: ID
+        customerId: ID
+        uploads: [UploadPhoto]
+        questions: [CustomerFeedbackQuestionAnswers]
+        memberAnswers: [FeedbackMemberAnswers]
+        offerType: String
+        createdAt: Date
+        updatedAt: Date
+    }
 
+    type QuestionAnswerCounts {
+        name: String
+        count: Int
+    }
+    
+    type MemberAnswer {
+        questionId: ID
+        answer: String
+    }
+    
+    type FeedbackMemberAnswers {
+        _id: ID
+        customerFeedbackId: ID
+        userId: ID
+        member: User
+        answers: [MemberAnswer]
+    }
+    
+    type CustomerFeedbackQuestionAnswers {
+        _id: ID
+        customerId: ID
+        question: String
+        answers: [QuestionAnswerCounts]
+        createdAt: Date
+        updatedAt: Date
+    }
+    
     type Customer {
         _id: ID
         status:String

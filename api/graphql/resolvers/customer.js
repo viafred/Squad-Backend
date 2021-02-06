@@ -9,6 +9,8 @@ const { Stitch, UserPasswordAuthProviderClient, UserPasswordCredential } = requi
 const stitchClient = Stitch.initializeDefaultAppClient(process.env.REALM_APP_ID);
 const emailPasswordClient = stitchClient.auth.getProviderClient(UserPasswordAuthProviderClient.factory);
 
+const _ = require('lodash');
+
 const customers = async (root, args, context, info) => {
     const customersRef = dbClient.db(dbName).collection("customers");
     const customers = await customersRef.find({}).toArray();
@@ -245,6 +247,89 @@ const getCustomerFeedbacks = async (root, args, context, info) => {
     ]).toArray();
 
     return [...customerFeedbacksUploads]
+}
+
+const getFeedbackAnswers = async (root, args, context, info) => {
+    let customerFeedback = await dbClient.db(dbName).collection("customer_feedback").aggregate([
+        {
+            $lookup:{
+                from: "customer_questions",
+                localField : "questions",
+                foreignField : "_id",
+                as : "questions"
+            }
+        },
+        {
+            $lookup: {
+                from: 'uploads',
+                let: { "uploads": "$uploads" },
+                pipeline: [
+                    { $match: { "$expr": { "$in": [ "$_id", "$$uploads" ] } } },
+                    {
+                        $lookup: {
+                            from: 'users',
+                            let: { "memberId": "$memberId" },
+                            pipeline: [
+                                { "$match": { "$expr": { "$eq": [ "$_id", "$$memberId" ] } } },
+                            ],
+                            as: "member"
+                        }},
+                    {
+                        $addFields: {
+                            member: { "$arrayElemAt": [ "$member", 0 ] }
+                        }}
+                ],
+                as: "uploads"
+            }
+        },
+        {
+            $addFields: {
+                "questions": "$questions",
+                "uploads": "$uploads"
+            }
+        },
+
+        { $match : { _id : new ObjectId(args.feedbackId) } }
+    ]).toArray();
+
+    let feedback = customerFeedback[0]
+    for ( const i in feedback.questions ){
+        const q = feedback.questions[i]
+        q.answers = q.answers.map(a => ({ name: a, count: 0 }))
+    }
+
+
+    let customerFeedbackAnswers = await dbClient.db(dbName).collection("feedback_answers").aggregate([
+        {
+            $lookup:{
+                from: "users",
+                localField : "userId",
+                foreignField : "_id",
+                as : "users"
+            }
+        },
+        {
+            $addFields: {
+                "member": { "$arrayElemAt": [ "$users", 0 ] },
+            }
+        },
+
+        { $match : { customerFeedbackId : new ObjectId(args.feedbackId) } }
+    ]).toArray();
+
+    feedback.memberAnswers = customerFeedbackAnswers
+
+    for ( const k in feedback.questions ){
+        const question = feedback.questions[k]
+        for ( const answerI in customerFeedbackAnswers ){
+            const memberFeedback = customerFeedbackAnswers[answerI]
+            const memberAnswer = _.find(memberFeedback.answers, {'questionId': question._id})
+            let feedbackQuestionAnswer = _.find(question.answers, {'name': memberAnswer.answer})
+            feedbackQuestionAnswer.count = feedbackQuestionAnswer.count + 1
+        }
+    }
+
+    return feedback
 }
 
 const getCustomerQuestion = async (root, args, context, info) => {
@@ -500,7 +585,8 @@ module.exports = {
         getCustomerFeedbacks,
         getPendingCustomers,
         getCustomerQuestions,
-        getCustomerQuestion
+        getCustomerQuestion,
+        getFeedbackAnswers
     },
     mutations: {
         saveCustomer,
