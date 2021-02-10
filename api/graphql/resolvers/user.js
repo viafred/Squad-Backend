@@ -211,14 +211,15 @@ const getUserFeedbacks = async (root, args, context, info) => {
                             from: 'users',
                             let: { "memberId": "$memberId" },
                             pipeline: [
-                                { "$match": { "$expr": { "$eq": [ "$_id", "$$memberId" ] } } },
+                                { "$match": { "$expr": { "$eq": [ "$_id", "$$memberId" ] } } }
                             ],
                             as: "member"
                         }},
                     {
                         $addFields: {
                             member: { "$arrayElemAt": [ "$member", 0 ] }
-                        }}
+                    }},
+                    { "$match" : { "member._id" : new ObjectId(args.id) } },
                 ],
                 as: "uploads"
             }
@@ -231,8 +232,7 @@ const getUserFeedbacks = async (root, args, context, info) => {
                 "productUrl": { "$arrayElemAt": [ "$uploads.productUrl", 0 ] }
             }
         },
-
-        { $match : { 'uploads.member._id' : new ObjectId(args.id) } },
+        { "$match" : { "uploads.member._id" : new ObjectId(args.id) } },
         { $match : { 'feedbackAnswers.0' : { "$exists": false } } }
     ]).toArray();
 
