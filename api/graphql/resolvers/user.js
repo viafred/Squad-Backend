@@ -278,6 +278,15 @@ const lookbookit =  async (parent, args) => {
     }
 }
 
+const unlookbookit =  async (parent, args) => {
+    try {
+        const response = await dbClient.db(dbName).collection('users_lookbook').deleteOne({_id: new ObjectId(args.id)});
+        return args.id;
+    } catch (e) {
+        return e;
+    }
+}
+
 const updateUserStatus = async (parent, args) => {
     try {
         await dbClient.db(dbName).collection('users').updateOne(
@@ -376,6 +385,7 @@ module.exports = {
     mutations: {
         updateUser,
         lookbookit,
+        unlookbookit,
         updateUserStatus,
         sendConfirmationEmail,
         follow,
