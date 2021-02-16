@@ -110,6 +110,7 @@ const typeDefs = gql`
         sendConfirmationEmail(id:ID):Boolean
         updateUserStatus(id:ID):Boolean
         follow(userId1:ID, userId2:ID): String
+        unfollow(userId1:ID, userId2:ID): String
         answerFeedback(data:AnswerFeedbackInput):String 
     }
 `

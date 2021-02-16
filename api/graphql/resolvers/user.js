@@ -343,6 +343,23 @@ const follow = async (parent, args) => {
     }
 }
 
+const unfollow = async (parent, args) => {
+    try {
+
+        const response = await dbClient.db(dbName).collection('followers').deleteOne(
+            {
+                userId1: new ObjectId(args.userId1),
+                userId2: new ObjectId(args.userId2)
+            }
+        );
+
+        return args.userId1;
+    } catch (e){
+        console.log(e)
+        return e;
+    }
+}
+
 const answerFeedback =  async (parent, args) => {
     try {
         let answerFeedback = {
@@ -379,6 +396,7 @@ module.exports = {
         updateUserStatus,
         sendConfirmationEmail,
         follow,
+        unfollow,
         answerFeedback
     }
 }
