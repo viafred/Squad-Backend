@@ -31,6 +31,7 @@ const typeDefs = gql`
         age: String
         paymentMethod:String
         paymentUsername:String
+        status: String
     }
 
     type Follower {
@@ -110,6 +111,7 @@ const typeDefs = gql`
         unlookbookit(id:ID):String
         sendConfirmationEmail(id:ID):Boolean
         updateUserStatus(id:ID):Boolean
+        deleteProfile(id:ID):Boolean
         follow(userId1:ID, userId2:ID): String
         unfollow(userId1:ID, userId2:ID): String
         answerFeedback(data:AnswerFeedbackInput):String 

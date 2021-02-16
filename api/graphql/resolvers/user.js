@@ -303,6 +303,22 @@ const updateUserStatus = async (parent, args) => {
     return true;
 }
 
+const deleteProfile = async (parent, args) => {
+    try {
+        await dbClient.db(dbName).collection('users').updateOne(
+            {_id: new ObjectId(args.id)},
+            {
+                $set: {status: 'deleted'},
+                $currentDate: { updatedAt: true }
+            }
+        );
+    } catch (e){
+        return e;
+    }
+
+    return true;
+}
+
 const sendConfirmationEmail = async (parent, args) => {
     try {
         let user = await dbClient.db(dbName).collection('users').findOne({$or: [{stitchId: args.id}, {email: args.id}]});
@@ -404,6 +420,7 @@ module.exports = {
         lookbookit,
         unlookbookit,
         updateUserStatus,
+        deleteProfile,
         sendConfirmationEmail,
         follow,
         unfollow,
