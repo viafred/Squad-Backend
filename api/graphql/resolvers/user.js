@@ -232,7 +232,7 @@ const getUserFeedbacks = async (root, args, context, info) => {
                 "productUrl": { "$arrayElemAt": [ "$uploads.productUrl", 0 ] }
             }
         },
-        { "$match" : { "uploads.member._id" : new ObjectId(args.id) } },
+        { $match : { "uploads.member._id" : new ObjectId(args.id) } },
         { $match : { 'feedbackAnswers.0' : { "$exists": false } } }
     ]).toArray();
 

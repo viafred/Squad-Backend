@@ -16,6 +16,7 @@ const typeDefs = gql`
         getCustomerQuestion(questionId:ID):CustomerQuestion
         getCustomerQuestions(customerId:ID): [CustomerQuestion]
         getFeedbackAnswers(feedbackId:ID): CustomerFeedbackAnswers
+        getCreditHistory(customerId:ID): [CustomerCredits]
     }
 
     type CustomerQuestion {
@@ -86,6 +87,15 @@ const typeDefs = gql`
         updatedAt: Date
     }
     
+    type CustomerCredits {
+        _id:ID
+        customerId: ID
+        customer: Customer
+        amount: Float
+        createdAt: Date
+        updatedAt: Date
+    }
+    
     type Customer {
         _id: ID
         status:String
@@ -115,6 +125,8 @@ const typeDefs = gql`
         billingState: String
         billingZipcode: String
         brand: Brand
+        credits: [CustomerCredits]
+        totalCredits: Float
         createdAt: Date
         updateAt: Date
     }
@@ -183,6 +195,7 @@ const typeDefs = gql`
         createGroup(data:GroupInput):String
         saveFeedback(data:FeedbackInput):String
         saveQuestion(question:QuestionInput!):String
+        addCredit(customerId:ID, amount: Float):String
     }
 `
 

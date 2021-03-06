@@ -12,8 +12,22 @@ const emailPasswordClient = stitchClient.auth.getProviderClient(UserPasswordAuth
 const _ = require('lodash');
 
 const customers = async (root, args, context, info) => {
-    const customersRef = dbClient.db(dbName).collection("customers");
-    const customers = await customersRef.find({}).toArray();
+    const customers = dbClient.db(dbName).collection("customers").aggregate([
+        {
+            $lookup:{
+                from: "customer_credits",
+                localField : "_id",
+                foreignField : "customerId",
+                as : "credits"
+            }
+        },
+        {
+            $addFields: {
+                "credits": "$credits",
+                "totalCredits": {$sum: "$credits.amount"}
+            }
+        },
+    ]).toArray();
 
     return customers;
 }
@@ -362,6 +376,28 @@ const getCustomerQuestions = async (root, args, context, info) => {
     return customerQuestions
 }
 
+const getCreditHistory = async (root, args, context, info) => {
+    let creditHistory = await dbClient.db(dbName).collection("customer_credits").aggregate([
+        {
+            $lookup:{
+                from: "customers",
+                localField : "customerId",
+                foreignField : "_id",
+                as : "customers"
+            }
+        },
+        {
+            $addFields: {
+                "customer": { "$arrayElemAt": [ "$customers", 0 ] },
+            }
+        },
+        { $match : { customerId : new ObjectId(args.customerId) } }
+    ]).toArray();
+
+    return creditHistory
+}
+
+
 const saveCustomer =  async (parent, args) => {
     try {
         let customerInput = JSON.parse(JSON.stringify(args.customer));
@@ -573,6 +609,25 @@ const saveQuestion =  async (parent, args) => {
     }
 }
 
+const addCredit =  async (parent, args) => {
+    try {
+
+        let credit = {
+            customerId: new ObjectId(args.customerId),
+            amount: args.amount,
+            createdAt: new Date(),
+            updatedAt: new Date()
+        };
+
+        const _credit = await dbClient.db(dbName).collection('customer_credits').insertOne(credit);
+
+        return _credit.insertedId.toString()
+    } catch (e) {
+        return e;
+    }
+}
+
+
 module.exports = {
     queries: {
         customers,
@@ -586,14 +641,16 @@ module.exports = {
         getPendingCustomers,
         getCustomerQuestions,
         getCustomerQuestion,
-        getFeedbackAnswers
+        getFeedbackAnswers,
+        getCreditHistory
     },
     mutations: {
         saveCustomer,
         verifyCustomer,
         createGroup,
         saveFeedback,
-        saveQuestion
+        saveQuestion,
+        addCredit
     },
     helper: {
         getGroups
