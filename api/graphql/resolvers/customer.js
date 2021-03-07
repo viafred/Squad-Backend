@@ -621,6 +621,15 @@ const addCredit =  async (parent, args) => {
 
         const _credit = await dbClient.db(dbName).collection('customer_credits').insertOne(credit);
 
+        const customer = await dbClient.db(dbName).collection("customers").findOne({_id: new ObjectId(args.customerId)});
+        const availableCredits = customer.availableCredits ? customer.availableCredits + args.amount : args.amount
+        await dbClient.db(dbName).collection("customers").updateOne(
+            { _id: new ObjectId(args.customerId) },
+            {
+                $set: {availableCredits: availableCredits},
+                $currentDate: { updatedAt: true }
+            });
+
         return _credit.insertedId.toString()
     } catch (e) {
         return e;
