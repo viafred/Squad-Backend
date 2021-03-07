@@ -44,7 +44,9 @@ const typeDefs = gql`
         questions: [CustomerQuestion]
         uploads: [UploadPhoto]
         productUrl: String
+        memberUploadId: ID
         offerType: String
+        amount: Float
         createdAt: Date
         updatedAt: Date
     }
@@ -126,7 +128,7 @@ const typeDefs = gql`
         billingZipcode: String
         brand: Brand
         credits: [CustomerCredits]
-        totalCredits: Float
+        availableCredits: Float
         createdAt: Date
         updateAt: Date
     }
@@ -180,6 +182,7 @@ const typeDefs = gql`
         uploads:[String]
         questions:[String]
         offerType:String
+        amount: Int
     }
     
     input QuestionInput {

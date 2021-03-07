@@ -24,7 +24,7 @@ const customers = async (root, args, context, info) => {
         {
             $addFields: {
                 "credits": "$credits",
-                "totalCredits": {$sum: "$credits.amount"}
+                "availableCredits": {$sum: "$credits.amount"}
             }
         },
     ]).toArray();
@@ -568,10 +568,21 @@ const saveFeedback =  async (parent, args) => {
             uploadId: args.data.uploadId && new ObjectId(args.data.uploadId) || null,
             uploads: args.data.uploads.map(u => new ObjectId(u)),
             questions: args.data.questions.map(q => new ObjectId(q)),
+            amount: args.data.amount,
             offerType: args.data.offerType,
             createdAt: new Date(),
             updatedAt: new Date()
         };
+
+        const totalAmount = args.data.amount * args.data.uploads.length
+        const customer = await dbClient.db(dbName).collection("customers").findOne({_id: new ObjectId(args.data.customerId)});
+        const availableCredits = customer.availableCredits ? customer.availableCredits - totalAmount : 0
+        await dbClient.db(dbName).collection("customers").updateOne(
+            { _id: new ObjectId(args.data.customerId) },
+            {
+                $set: { availableCredits: availableCredits },
+                $currentDate: { updatedAt: true }
+            });
 
         const _feedback = await dbClient.db(dbName).collection('customer_feedback').insertOne(feedBack);
 

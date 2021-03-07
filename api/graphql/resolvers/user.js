@@ -229,7 +229,8 @@ const getUserFeedbacks = async (root, args, context, info) => {
                 "questions": "$questions",
                 "uploads": "$uploads",
                 "offerType": "upload",
-                "productUrl": { "$arrayElemAt": [ "$uploads.productUrl", 0 ] }
+                "productUrl": { "$arrayElemAt": [ "$uploads.productUrl", 0 ] },
+                "memberUploadId": { "$arrayElemAt": [ "$uploads._id", 0 ] }
             }
         },
         { $match : { "uploads.member._id" : new ObjectId(args.id) } },
@@ -391,9 +392,20 @@ const answerFeedback =  async (parent, args) => {
             customerFeedbackId: new ObjectId(args.data.feedbackId),
             userId: new ObjectId(args.data.userId),
             answers: args.data.answers.map(a => ({ ...a,  questionId: new ObjectId(a.questionId)})),
+            amount: args.data.amount,
+            memberUploadId: new ObjectId(args.data.memberUploadId),
             createdAt: new Date(),
             updatedAt: new Date()
         };
+
+
+        const upload = await dbClient.db(dbName).collection("uploads").findOne({ _id: new ObjectId(args.data.memberUploadId) })
+        let earnedAmount = upload.earnedAmount ? upload.earnedAmount : 0
+        earnedAmount = earnedAmount + args.data.amount
+        await dbClient.db(dbName).collection("uploads").updateOne(
+            { _id: new ObjectId(upload._id) },
+            { $set: { credited: true, earnedAmount: earnedAmount }}
+        )
 
         answerFeedback = await dbClient.db(dbName).collection('feedback_answers').insertOne(answerFeedback);
 

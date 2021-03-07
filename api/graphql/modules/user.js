@@ -103,6 +103,8 @@ const typeDefs = gql`
         feedbackId:ID!
         userId:ID!
         answers: [AnswerFeedbackQuestionsInput]
+        amount: Int
+        memberUploadId: ID
     }
 
     extend type Mutation {
