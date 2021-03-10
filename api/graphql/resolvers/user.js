@@ -400,11 +400,11 @@ const answerFeedback =  async (parent, args) => {
 
 
         const upload = await dbClient.db(dbName).collection("uploads").findOne({ _id: new ObjectId(args.data.memberUploadId) })
-        let earnedAmount = upload.earnedAmount ? upload.earnedAmount : 0
-        earnedAmount = earnedAmount + args.data.amount
+        let offerEarnedAmount = upload.offerEarnedAmount ? upload.offerEarnedAmount : 0
+        offerEarnedAmount = offerEarnedAmount + args.data.amount
         await dbClient.db(dbName).collection("uploads").updateOne(
             { _id: new ObjectId(upload._id) },
-            { $set: { credited: true, earnedAmount: earnedAmount }}
+            { $set: { credited: true, offerEarnedAmount: offerEarnedAmount }}
         )
 
         answerFeedback = await dbClient.db(dbName).collection('feedback_answers').insertOne(answerFeedback);

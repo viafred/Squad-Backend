@@ -52,12 +52,11 @@ const getMemberCompensations = async (root, args, context, info) => {
 }
 
 const getMemberTotalEarnings = async (root, args, context, info) => {
-  let compUploads = await getMemberCompensations(root, args, context, info)
   let memberEarnings = {}
-  memberEarnings.uploads = compUploads.map(u => u.totalCompensation)
-  memberEarnings.uploads = memberEarnings.uploads.reduce((previous, next) => parseFloat(previous) + parseFloat(next), 0)
-  memberEarnings.offers = 0
-  //TODO
+
+  const uploads = await dbClient.db(dbName).collection("uploads").find({ memberId: new ObjectId(args.memberId) }).toArray();
+  memberEarnings.uploads = uploads.map(u => u.earnedAmount ? u.earnedAmount : 0).reduce((previous, next) => parseFloat(previous) + parseFloat(next), 0)
+  memberEarnings.offers = uploads.map(u => u.offerEarnedAmount ? u.offerEarnedAmount : 0).reduce((previous, next) => parseFloat(previous) + parseFloat(next), 0)
 
   return memberEarnings
 }
