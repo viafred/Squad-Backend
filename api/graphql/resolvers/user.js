@@ -240,6 +240,53 @@ const getUserFeedbacks = async (root, args, context, info) => {
     return [...customerFeedbacksUploads]
 }
 
+const getUserCompletedAnswers = async (root, args, context, info) => {
+    let answers = await dbClient.db(dbName).collection("feedback_answers").aggregate([
+        {
+            "$lookup": {
+                "from": "customer_questions",
+                "localField": "answers.questionId",
+                "foreignField": "_id",
+                "as": "questions"
+            }
+        },
+        {
+            "$addFields": {
+                "answers": {
+                    "$map": {
+                        "input": "$answers",
+                        "in": {
+                            "$mergeObjects": [
+                                "$$this",
+                                {
+                                    "question": {
+                                        "$arrayElemAt": [
+                                            "$questions",
+                                            {
+                                                "$indexOfArray": [ "$questions._id", "$$this.question" ]
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        { $project: { "questions": 0 } },
+        { $addFields: {
+                "feedbackOfferAnswers": "$answers",
+            }
+        },
+        { $match : { "userId" : new ObjectId(args.id) } },
+        { $sort: {createdAt: -1 }}
+    ]).toArray();
+
+    return answers
+}
+
+
 /* MUTATIONS */
 const updateUser = async (parent, args) => {
     let userInput = JSON.parse(JSON.stringify(args.user));
@@ -421,6 +468,7 @@ module.exports = {
         user,
         getSpotlightMembers,
         getUserFeedbacks,
+        getUserCompletedAnswers,
         getLookbook,
         getLookbookByUserId,
         getFollowers,

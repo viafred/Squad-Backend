@@ -14,6 +14,7 @@ const typeDefs = gql`
         getFollowings(id:ID): [Follower]
         isFollowing(userId1:ID, userId2: ID): Boolean
         getUserFeedbacks(id: ID): [CustomerFeedback]
+        getUserCompletedAnswers(id: ID): [FeedbackAnswer]
     }
 
     scalar Date
@@ -53,6 +54,21 @@ const typeDefs = gql`
         brands:[String]
         categories:[String]
         uploads:[String]
+    }
+    
+    type FeedbackAnswers {
+        questionId: ID
+        answer: String
+        question: CustomerQuestion
+    }
+    
+    type FeedbackAnswer {
+        _id: ID
+        customerFeedbackId: ID
+        userId: ID
+        answers: [FeedbackAnswers]
+        feedbackOfferAnswers: [FeedbackAnswers]
+        amount: Float
     }
 
     input UserInput {
