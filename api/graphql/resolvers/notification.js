@@ -4,6 +4,16 @@ const NotificationFactory = require('../../utils/Notification/notificationFactor
 
 const moment = require('moment'); // require
 
+const NOTIFICATION_TYPES = {
+    OFFER_CREATED: 'offer_created'
+}
+
+const NOTIFICATION_FROM_TO_TYPES = {
+    CUSTOMER: 'customer',
+    MEMBER: 'member',
+    ADMIN: 'admin'
+}
+
 /* Queries */
 const getMemberNotifications = async (root, args, context, info) => {
     const notifications = await dbClient.db(dbName)
@@ -26,21 +36,21 @@ const getMemberNotifications = async (root, args, context, info) => {
     return notifications;
 }
 
-/* Mutations */
-const addNotification =  async (parent, args) => {
+/* Helpers */
+const addNotification =  async (data) => {
     try {
-
-        console.log('Notification Requests ', args.data)
+        console.log('Notification Requests ', data)
 
         let notification = {
-            type: args.data.type,
-            message: args.data.message,
-            fromUserType: args.data.fromUserType,
-            fromUserId: new ObjectId(args.data.fromUserId),
-            toUserType: args.data.toUserType,
-            toUserId: new ObjectId(args.data.toUserId),
-            externalId: new ObjectId(args.data.externalId),
-            read: args.data.read,
+            type: data.type,
+            title: data.title,
+            message: data.message,
+            fromUserType: data.fromUserType,
+            fromUserId: new ObjectId(data.fromUserId),
+            toUserType: data.toUserType,
+            toUserId: new ObjectId(data.toUserId),
+            externalId: new ObjectId(data.externalId),
+            read: false,
             createdAt: new Date(),
             updatedAt: new Date()
         };
@@ -54,11 +64,39 @@ const addNotification =  async (parent, args) => {
 }
 
 
+const createOfferNotificationsToMembers = async (customerId, uploads, externalId) => {
+    try {
+        const _uploads = await dbClient.db(dbName).collection("uploads").find({ _id: { $in: uploads.map(u => new ObjectId(u)) } }).toArray();
+
+        for ( let upload of _uploads ){
+            const data = {
+                type: NOTIFICATION_TYPES.OFFER_CREATED,
+                title: "New Offer",
+                message: "New feedback offer from Customer",
+                fromUserType: NOTIFICATION_FROM_TO_TYPES.CUSTOMER,
+                fromUserId: customerId,
+                toUserType: NOTIFICATION_FROM_TO_TYPES.MEMBER,
+                toUserId: upload.memberId,
+                externalId: externalId,
+            }
+
+            console.log('Create Offer Notification To Members ', data)
+            await addNotification(data)
+        }
+    } catch (e) {
+        return e;
+    }
+}
+
 module.exports = {
     queries: {
         getMemberNotifications
     },
     mutations: {
-        addNotification
+
+    },
+    helper: {
+        addNotification,
+        createOfferNotificationsToMembers,
     }
 }

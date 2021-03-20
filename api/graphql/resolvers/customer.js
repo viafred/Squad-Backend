@@ -4,6 +4,7 @@ const ObjectId = require('mongodb').ObjectId;
 const brandResolvers = require('../resolvers/brand');
 const categoryResolvers = require('../resolvers/category');
 const productResolvers = require('../resolvers/product');
+const notificationResolvers = require('../resolvers/notification');
 
 const { Stitch, UserPasswordAuthProviderClient, UserPasswordCredential } = require('mongodb-stitch-server-sdk');
 const stitchClient = Stitch.initializeDefaultAppClient(process.env.REALM_APP_ID);
@@ -585,6 +586,9 @@ const saveFeedback =  async (parent, args) => {
             });
 
         const _feedback = await dbClient.db(dbName).collection('customer_feedback').insertOne(feedBack);
+
+        //Add Notification
+        await notificationResolvers.helper.createOfferNotificationsToMembers(args.data.customerId, feedBack.uploads, _feedback.insertedId.toString())
 
         return _feedback.insertedId.toString()
     } catch (e) {
