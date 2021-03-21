@@ -5,7 +5,8 @@ const NotificationFactory = require('../../utils/Notification/notificationFactor
 const moment = require('moment'); // require
 
 const NOTIFICATION_TYPES = {
-    OFFER_CREATED: 'offer_created'
+    OFFER_CREATED: 'offer_created',
+    MEMBER_OFFER_EARNED_AMOUNT: 'offer_earned_amount'
 }
 
 const NOTIFICATION_FROM_TO_TYPES = {
@@ -19,6 +20,8 @@ const getMemberNotifications = async (root, args, context, info) => {
     const notifications = await dbClient.db(dbName)
         .collection("notifications")
         .find({ toUserType: "member", toUserId: new ObjectId(args.userId) })
+        .sort({ createdAt: -1 })
+        .limit(10)
         .toArray()
 
     console.log('Get Member Notifications ', notifications)
@@ -39,7 +42,7 @@ const getMemberNotifications = async (root, args, context, info) => {
 /* Helpers */
 const addNotification =  async (data) => {
     try {
-        console.log('Notification Requests ', data)
+        console.log('Add Notification Data ', data)
 
         let notification = {
             type: data.type,
@@ -66,13 +69,17 @@ const addNotification =  async (data) => {
 
 const createOfferNotificationsToMembers = async (customerId, uploads, externalId) => {
     try {
-        const _uploads = await dbClient.db(dbName).collection("uploads").find({ _id: { $in: uploads.map(u => new ObjectId(u)) } }).toArray();
+        let customer = await dbClient.db(dbName).collection('customers').findOne({ _id: new ObjectId(customerId) });
+
+        const _uploads = await dbClient.db(dbName).collection("uploads")
+            .find({ _id: { $in: uploads.map(u => new ObjectId(u)) } })
+            .toArray();
 
         for ( let upload of _uploads ){
             const data = {
                 type: NOTIFICATION_TYPES.OFFER_CREATED,
                 title: "New Offer",
-                message: "New feedback offer from Customer",
+                message: `New feedback offer from Customer ${customer.companyName}`,
                 fromUserType: NOTIFICATION_FROM_TO_TYPES.CUSTOMER,
                 fromUserId: customerId,
                 toUserType: NOTIFICATION_FROM_TO_TYPES.MEMBER,
@@ -88,15 +95,64 @@ const createOfferNotificationsToMembers = async (customerId, uploads, externalId
     }
 }
 
+const createAnswerFeedbackEarnedNotificationToMember = async (customerId, userId, amount, externalId) => {
+    try {
+        let customer = await dbClient.db(dbName).collection('customers').findOne({ _id: new ObjectId(customerId) });
+
+        const earnedAmount = (amount).toLocaleString('en-US', {
+            style: 'currency',
+            currency: 'USD',
+        });
+
+        const data = {
+            type: NOTIFICATION_TYPES.MEMBER_OFFER_EARNED_AMOUNT,
+            title: "New Answer",
+            message: `Earned ${earnedAmount} from Customer ${customer.companyName} feedback Offer`,
+            fromUserType: NOTIFICATION_FROM_TO_TYPES.CUSTOMER,
+            fromUserId: customerId,
+            toUserType: NOTIFICATION_FROM_TO_TYPES.MEMBER,
+            toUserId: userId,
+            externalId: externalId,
+        }
+
+        console.log('Create Earned Amount Notification To Members ', data)
+        await addNotification(data)
+
+    } catch (e) {
+        return e;
+    }
+}
+
+
+
+
+/* Mutations */
+const readNotification =  async (parent, args) => {
+    try {
+        await dbClient.db(dbName).collection('notifications').updateOne(
+            { _id: new ObjectId(args.notificationId) },
+            {
+                $set: { read: args.read },
+                $currentDate: { updatedAt: true }
+            }
+        );
+        return args.notificationId
+    } catch (e) {
+        return e;
+    }
+}
+
+
 module.exports = {
     queries: {
         getMemberNotifications
     },
     mutations: {
-
+        readNotification
     },
     helper: {
         addNotification,
         createOfferNotificationsToMembers,
+        createAnswerFeedbackEarnedNotificationToMember
     }
 }

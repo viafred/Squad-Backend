@@ -3,6 +3,8 @@ const ObjectId = require('mongodb').ObjectId;
 const sgMail = require('@sendgrid/mail');
 const jwt = require('jsonwebtoken');
 
+const notificationResolvers = require('../resolvers/notification');
+
 const users = async (root, args, context, info) => {
     const usersRef = dbClient.db(dbName).collection("users");
     const users = await usersRef.find({}).toArray();
@@ -455,6 +457,15 @@ const answerFeedback =  async (parent, args) => {
         )
 
         answerFeedback = await dbClient.db(dbName).collection('feedback_answers').insertOne(answerFeedback);
+
+        //Add Notification
+        let feedback = await dbClient.db(dbName).collection('customer_feedback').findOne({ _id: new ObjectId(args.data.feedbackId) });
+        await notificationResolvers.helper.createAnswerFeedbackEarnedNotificationToMember(
+            feedback.customerId,
+            args.data.userId,
+            args.data.amount,
+            answerFeedback.insertedId.toString()
+        )
 
         return answerFeedback.insertedId.toString();
     } catch (e) {

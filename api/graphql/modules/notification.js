@@ -37,6 +37,7 @@ const typeDefs = gql`
     
     extend type Mutation {
         addNotification(data: AddNotificationInput!): String
+        readNotification(notificationId: String, read:Boolean): String
     }
 `
 
