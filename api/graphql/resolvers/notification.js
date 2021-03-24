@@ -6,7 +6,8 @@ const moment = require('moment'); // require
 
 const NOTIFICATION_TYPES = {
     OFFER_CREATED: 'offer_created',
-    MEMBER_OFFER_EARNED_AMOUNT: 'offer_earned_amount'
+    MEMBER_OFFER_EARNED_AMOUNT: 'offer_earned_amount',
+    MEMBER_SUCCESSFUL_UPLOAD: 'member_successful_upload'
 }
 
 const NOTIFICATION_FROM_TO_TYPES = {
@@ -67,12 +68,12 @@ const addNotification =  async (data) => {
 }
 
 
-const createOfferNotificationsToMembers = async (customerId, uploads, externalId) => {
+const createOfferNotificationsToMembers = async (customerId, uploadIds, externalId) => {
     try {
         let customer = await dbClient.db(dbName).collection('customers').findOne({ _id: new ObjectId(customerId) });
 
         const _uploads = await dbClient.db(dbName).collection("uploads")
-            .find({ _id: { $in: uploads.map(u => new ObjectId(u)) } })
+            .find({ _id: { $in: uploadIds.map(u => new ObjectId(u)) } })
             .toArray();
 
         for ( let upload of _uploads ){
@@ -123,6 +124,37 @@ const createAnswerFeedbackEarnedNotificationToMember = async (customerId, userId
     }
 }
 
+const createSuccessfulUploadNotificationToMember = async (uploadIds, amount) => {
+    try {
+        const _uploads = await dbClient.db(dbName).collection("uploads")
+            .find({ _id: { $in: uploadIds.map(u => new ObjectId(u)) } })
+            .toArray();
+
+        const earnedAmount = (amount).toLocaleString('en-US', {
+            style: 'currency',
+            currency: 'USD',
+        });
+
+        for ( let upload of _uploads ){
+            const data = {
+                type: NOTIFICATION_TYPES.MEMBER_SUCCESSFUL_UPLOAD,
+                title: "New Upload",
+                message: `Earned ${earnedAmount} from ${upload.brandName}/${upload.categoryName}/${upload.productName} Look Upload`,
+                fromUserType: NOTIFICATION_FROM_TO_TYPES.ADMIN,
+                fromUserId: "5ecfb68302d386b70167d566",
+                toUserType: NOTIFICATION_FROM_TO_TYPES.MEMBER,
+                toUserId: upload.memberId,
+                externalId: upload._id,
+            }
+
+            console.log('Create Successful Upload Notification To Members ', data)
+            await addNotification(data)
+        }
+
+    } catch (e) {
+        return e;
+    }
+}
 
 
 
@@ -153,6 +185,7 @@ module.exports = {
     helper: {
         addNotification,
         createOfferNotificationsToMembers,
-        createAnswerFeedbackEarnedNotificationToMember
+        createAnswerFeedbackEarnedNotificationToMember,
+        createSuccessfulUploadNotificationToMember
     }
 }

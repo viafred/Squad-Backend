@@ -1,6 +1,8 @@
 const { dbClient, dbName } = require('../../config/mongo');
 const ObjectId = require('mongodb').ObjectId;
 
+const notificationResolvers = require('../resolvers/notification');
+
 const _ = require('lodash');
 const { union } = require('lodash');
 
@@ -786,6 +788,8 @@ const compensateUploads = async(amount) => {
             { $set: { credited: true, earnedAmount: amount }}
         )
 
+        await notificationResolvers.helper.createSuccessfulUploadNotificationToMember(uploadIds, amount)
+
         return { uploadIds, totalCompensated: uploads ? uploads.length * amount : 0 }
     } catch (e){
         return e
@@ -807,6 +811,8 @@ const compensateUploadedProducts = async(amount) => {
                 { $set: {"earnedAmount": { $multiply: [ {$size:"$productIds"}, amount ] } }}
             ]
         )
+
+        await notificationResolvers.helper.createSuccessfulUploadNotificationToMember(uploadIds, amount)
 
         return { uploadIds, totalCompensated: productList ? productList.length * amount : 0 }
     } catch (e){
