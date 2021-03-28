@@ -2,6 +2,7 @@ const { dbClient, dbName } = require('../../config/mongo');
 const ObjectId = require('mongodb').ObjectId;
 
 const notificationResolvers = require('../resolvers/notification');
+const compensationResolvers = require('../resolvers/compensation');
 
 const _ = require('lodash');
 const { union } = require('lodash');
@@ -564,7 +565,15 @@ const addUploadedPhoto =  async (parent, args) => {
 
         photo.approved = brand.verified === true && category.verified === true && product.verified === true
         console.log(photo)
+
         let upload = await dbClient.db(dbName).collection('uploads').insertOne(photo);
+
+        if ( photo.approved ){
+            await compensationResolvers.helper.compensateApprovedUpload(upload.insertedId.toString(), new Date())
+            if ( product.verified ){
+                await compensationResolvers.helper.compensateApprovedProduct(upload.insertedId.toString(), new Date())
+            }
+        }
 
         return upload.insertedId.toString();
 
@@ -706,6 +715,12 @@ const verifyUploadedPhoto =  async (parent, args) => {
 
         console.log(args.uploadPhoto)
 
+        const upload = await dbClient.db(dbName).collection("uploads").findOne({_id: new ObjectId(args.uploadPhoto._id)});
+        if ( photo.approved ){
+            await compensationResolvers.helper.compensateApprovedUpload(args.uploadPhoto._id, upload.createdAt)
+            await compensationResolvers.helper.compensateApprovedProduct(args.uploadPhoto._id, upload.createdAt)
+        }
+
         const brandsRef = dbClient.db(dbName).collection("customer_brands").aggregate([
             {
                 $lookup:{
@@ -788,8 +803,6 @@ const compensateUploads = async(amount) => {
             { $set: { credited: true, earnedAmount: amount }}
         )
 
-        await notificationResolvers.helper.createSuccessfulUploadNotificationToMember(uploadIds, amount)
-
         return { uploadIds, totalCompensated: uploads ? uploads.length * amount : 0 }
     } catch (e){
         return e
@@ -811,8 +824,6 @@ const compensateUploadedProducts = async(amount) => {
                 { $set: {"earnedAmount": { $multiply: [ {$size:"$productIds"}, amount ] } }}
             ]
         )
-
-        await notificationResolvers.helper.createSuccessfulUploadNotificationToMember(uploadIds, amount)
 
         return { uploadIds, totalCompensated: productList ? productList.length * amount : 0 }
     } catch (e){
