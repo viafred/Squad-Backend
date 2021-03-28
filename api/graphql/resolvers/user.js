@@ -257,15 +257,16 @@ const getUserCompletedAnswers = async (root, args, context, info) => {
                 "answers": {
                     "$map": {
                         "input": "$answers",
+                        "as": "answerElement",
                         "in": {
                             "$mergeObjects": [
-                                "$$this",
+                                "$$answerElement",
                                 {
                                     "question": {
                                         "$arrayElemAt": [
                                             "$questions",
                                             {
-                                                "$indexOfArray": [ "$questions._id", "$$this.question" ]
+                                                "$indexOfArray": [ "$questions._id", "$$answerElement.questionId" ]
                                             }
                                         ]
                                     }
@@ -277,10 +278,7 @@ const getUserCompletedAnswers = async (root, args, context, info) => {
             }
         },
         { $project: { "questions": 0 } },
-        { $addFields: {
-                "feedbackOfferAnswers": "$answers",
-            }
-        },
+        { $addFields: { "feedbackOfferAnswers": "$answers" } },
         { $match : { "userId" : new ObjectId(args.id) } },
         { $sort: {createdAt: -1 }}
     ]).toArray();
