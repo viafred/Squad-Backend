@@ -162,14 +162,23 @@ const getLookbookByUserId = async (root, { userId }, context, info) => {
         } },
         { "$lookup": {
             "from": "uploads",
-            "localField": "uploadIds",
+            "localField": "productIds",
             "foreignField": "_id",
-            "as": "uploads"
+            "as": "products"
         } },
+
+        { "$lookup": {
+                "from": "uploads",
+                "localField": "uploadIds",
+                "foreignField": "_id",
+                "as": "uploads"
+            }
+        },
+
         { "$addFields": {
             "brands": "$brands.name",
             "categories": "$categories.name",
-            "uploads": "$uploads.productName"
+            "products": "$products.productName"
         } },
         { $match : { userId : new ObjectId(userId) } }
     ]).toArray();
@@ -312,6 +321,7 @@ const lookbookit =  async (parent, args) => {
             userId: new ObjectId(args.data.userId),
             brandIds: args.data.brandIds ? args.data.brandIds.map(id => new ObjectId(id)) : [],
             categoryIds: args.data.categoryIds ? args.data.categoryIds.map(id => new ObjectId(id)) : [],
+            productIds: args.data.productIds ? args.data.productIds.map(id => new ObjectId(id)) : [],
             uploadIds: args.data.uploadIds ? args.data.uploadIds.map(id => new ObjectId(id)) : [],
             photoURL: args.data.photoURL,
             createdAt: new Date(),

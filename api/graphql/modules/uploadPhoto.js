@@ -41,6 +41,7 @@ const typeDefs = gql`
         category: Category
         brandId: ID
         categoryId: ID
+        productId: ID
         product: Product
         productName: String
         productUrl: String

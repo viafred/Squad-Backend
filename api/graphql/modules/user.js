@@ -49,11 +49,13 @@ const typeDefs = gql`
         userId:ID
         brandIds:[String]
         categoryIds:[String]
+        productIds:[String]
         uploadIds:[String]
         photoURL:String
         brands:[String]
         categories:[String]
-        uploads:[String]
+        products:[String]
+        uploads: [UploadPhoto]
     }
     
     type FeedbackAnswers {
@@ -106,6 +108,7 @@ const typeDefs = gql`
         userId:ID!
         brandIds:[String]
         categoryIds:[String]
+        productIds:[String]
         uploadIds:[String]
         photoURL:String
     }
