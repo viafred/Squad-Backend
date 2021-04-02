@@ -262,6 +262,14 @@ const getUserCompletedAnswers = async (root, args, context, info) => {
             }
         },
         {
+            "$lookup": {
+                "from": "uploads",
+                "localField": "memberUploadId",
+                "foreignField": "_id",
+                "as": "uploads"
+            }
+        },
+        {
             "$addFields": {
                 "answers": {
                     "$map": {
@@ -287,11 +295,12 @@ const getUserCompletedAnswers = async (root, args, context, info) => {
             }
         },
         { $project: { "questions": 0 } },
-        { $addFields: { "feedbackOfferAnswers": "$answers" } },
+        { $addFields: { "feedbackOfferAnswers": "$answers", "productURL": { "$arrayElemAt": [ "$uploads.productUrl", 0 ] }  } },
         { $match : { "userId" : new ObjectId(args.id) } },
-        { $sort: {createdAt: -1 }}
+        { $sort: { createdAt: -1 }}
     ]).toArray();
 
+    console.log(answers)
     return answers
 }
 

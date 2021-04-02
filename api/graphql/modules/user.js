@@ -71,6 +71,7 @@ const typeDefs = gql`
         answers: [FeedbackAnswers]
         feedbackOfferAnswers: [FeedbackAnswers]
         amount: Float
+        productURL: String
     }
 
     input UserInput {
