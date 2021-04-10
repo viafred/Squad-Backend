@@ -1,7 +1,6 @@
 const { dbClient, dbName } = require('../../config/mongo');
 const ObjectId = require('mongodb').ObjectId;
 
-const notificationResolvers = require('../resolvers/notification');
 const compensationResolvers = require('../resolvers/compensation');
 
 const _ = require('lodash');
@@ -205,7 +204,7 @@ const getUserUploads =  async (root, args, context, info) => {
                 from: "users",
                 localField : "memberId",
                 foreignField : "_id",
-                as : "member"
+                as : "members"
             }
         },
         {
@@ -213,7 +212,7 @@ const getUserUploads =  async (root, args, context, info) => {
                 from: "brands",
                 localField : "brandId",
                 foreignField : "_id",
-                as : "brand"
+                as : "brands"
             }
         },
         {
@@ -221,17 +220,27 @@ const getUserUploads =  async (root, args, context, info) => {
                 from: "categories",
                 localField : "categoryId",
                 foreignField : "_id",
-                as : "category"
+                as : "categories"
+            }
+        },
+        {
+            $lookup:{
+                from: "products",
+                localField : "productId",
+                foreignField : "_id",
+                as : "products"
+            }
+        },
+        {
+            $addFields: {
+                "brand": { "$arrayElemAt": [ "$brands", 0 ] },
+                "category": { "$arrayElemAt": [ "$categories", 0 ] },
+                "product": { "$arrayElemAt": [ "$products", 0 ] },
+                "member": { "$arrayElemAt": [ "$members", 0 ] },
             }
         },
         { $match : { memberId : new ObjectId(args.userId) } }
     ]).toArray();
-
-    for ( let upload of uploads ){
-        upload.brand = upload.brand[0];
-        upload.member = upload.member[0];
-        upload.category = upload.category[0];
-    }
 
     return uploads;
 }

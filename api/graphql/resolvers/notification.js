@@ -7,7 +7,8 @@ const moment = require('moment'); // require
 const NOTIFICATION_TYPES = {
     OFFER_CREATED: 'offer_created',
     MEMBER_OFFER_EARNED_AMOUNT: 'offer_earned_amount',
-    MEMBER_SUCCESSFUL_UPLOAD: 'member_successful_upload'
+    MEMBER_SUCCESSFUL_UPLOAD: 'member_successful_upload',
+    MEMBER_FOLLOW_MEMBER: 'member_follow_member'
 }
 
 const NOTIFICATION_FROM_TO_TYPES = {
@@ -124,6 +125,30 @@ const createAnswerFeedbackEarnedNotificationToMember = async (customerId, userId
     }
 }
 
+const createFollowNotificationToMember = async (userId1, userId2) => {
+    try {
+        let user1 = await dbClient.db(dbName).collection('users').findOne({ _id: new ObjectId(userId1) });
+
+        const data = {
+            type: NOTIFICATION_TYPES.MEMBER_FOLLOW_MEMBER,
+            title: "New Follow",
+            message: `Congratulations, ${user1.displayName} has started following you!`,
+            fromUserType: NOTIFICATION_FROM_TO_TYPES.MEMBER,
+            fromUserId: userId1,
+            toUserType: NOTIFICATION_FROM_TO_TYPES.MEMBER,
+            toUserId: userId2,
+            externalId: userId2,
+        }
+
+        console.log('Create Follow Notification To Members ', data)
+        await addNotification(data)
+
+    } catch (e) {
+        return e;
+    }
+}
+
+
 const createSuccessfulUploadNotificationToMember = async (uploadIds, amount) => {
     try {
         const _uploads = await dbClient.db(dbName).collection("uploads")
@@ -186,6 +211,7 @@ module.exports = {
         addNotification,
         createOfferNotificationsToMembers,
         createAnswerFeedbackEarnedNotificationToMember,
-        createSuccessfulUploadNotificationToMember
+        createSuccessfulUploadNotificationToMember,
+        createFollowNotificationToMember
     }
 }

@@ -428,6 +428,11 @@ const follow = async (parent, args) => {
 
         follower = await dbClient.db(dbName).collection('followers').insertOne(follower);
 
+        await notificationResolvers.helper.createFollowNotificationToMember(
+            args.userId1,
+            args.userId2
+        )
+
         return follower.insertedId.toString();
     } catch (e){
         console.log(e)
