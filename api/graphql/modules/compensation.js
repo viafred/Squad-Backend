@@ -21,6 +21,7 @@ const typeDefs = gql`
         member: User
         totalEarningsUpload: Float
         totalEarningsOffer: Float
+        createdAt: Date
     }
     
     type MemberEarnings {

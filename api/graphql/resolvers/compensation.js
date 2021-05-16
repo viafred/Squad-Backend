@@ -117,7 +117,8 @@ const getMembersCompensationAdminLedger = async (root, args, context, info) => {
 
                 let item = {
                     memberId: earning._id.memberId.toString(),
-                    member: earning.data[0].member
+                    member: earning.data[0].member,
+                    createdAt: earning.data[0].createdAt
                 }
 
                 item[totalEarningsType] = earning.totalEarnings
