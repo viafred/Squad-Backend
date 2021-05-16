@@ -8,11 +8,31 @@ const typeDefs = gql`
       compensationHistory:[Compensation]
       getMemberCompensations(memberId: String): [Compensation]
       getMemberTotalEarnings(memberId: String): TotalEarning
+      getMembersCompensationAdminLedger(month:Int, year:Int): [MemberEarningList]
     }
 
     type TotalEarning {
       uploads: Float
       offers: Float
+    }
+    
+    type MemberEarningList {
+        memberId: ID
+        member: User
+        totalEarningsUpload: Float
+        totalEarningsOffer: Float
+    }
+    
+    type MemberEarnings {
+        _id: ID
+        memberId: ID
+        member: User
+        amount: Float
+        totalUploadEarnings: Float
+        payed: Boolean
+        type: String
+        entityId: ID
+        createdAt: Date
     }
 
     type Compensation {

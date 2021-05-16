@@ -489,6 +489,18 @@ const answerFeedback =  async (parent, args) => {
             answerFeedback.insertedId.toString()
         )
 
+        await dbClient.db(dbName).collection('member_earnings').insertOne(
+            {
+                entityId: new ObjectId(feedback._id),
+                type: 'offer',
+                amount: args.data.amount,
+                memberId: new ObjectId(args.data.userId),
+                payed: false,
+                createdAt: new Date(),
+                updatedAt: new Date()
+            }
+        );
+
         return answerFeedback.insertedId.toString();
     } catch (e) {
         return e;

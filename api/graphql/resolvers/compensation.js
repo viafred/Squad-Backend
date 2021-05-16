@@ -62,6 +62,78 @@ const getMemberTotalEarnings = async (root, args, context, info) => {
     return memberEarnings
 }
 
+const getMembersCompensationAdminLedger = async (root, args, context, info) => {
+    try {
+        let earnings = await dbClient.db(dbName).collection("member_earnings").aggregate([
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "memberId",
+                    foreignField: "_id",
+                    as: "members"
+                }
+            },
+            {
+                $addFields: {
+                    "member": { "$arrayElemAt": [ "$members", 0 ] },
+                }
+            },
+            {
+                $project:
+                    {
+                        amount: "$amount",
+                        memberId:"$memberId",
+                        member: "$member",
+                        payed: "$payed",
+                        entityId: "$entityId",
+                        type: "$type",
+                        createdAt: "$createdAt",
+                        totalUploadEarnings: "$totalUploadEarnings",
+                        year: { $year: "$createdAt" },
+                        month: { $month: "$createdAt" }
+                    }
+            },
+            { $match : { "month" : args.month, "year": args.year } },
+            {
+                $group: {
+                    _id: {
+                        memberId: "$member._id",
+                        type: "$type",
+                    },
+                    totalEarnings: {
+                        $sum: "$amount"
+                    },
+                    data: { $push: "$$ROOT" }
+                },
+            },
+        ]).toArray()
+
+        let earningList = []
+        earnings.forEach(earning => {
+            let earningItem = earningList.find(item => item.memberId == earning._id.memberId.toString());
+            let totalEarningsType = 'totalEarnings'+ earning._id.type.charAt(0).toUpperCase() + earning._id.type.slice(1)
+
+            if ( !earningItem ){
+
+                let item = {
+                    memberId: earning._id.memberId.toString(),
+                    member: earning.data[0].member
+                }
+
+                item[totalEarningsType] = earning.totalEarnings
+                earningList.push(item)
+            } else {
+                earningItem[totalEarningsType] = earning.totalEarnings
+            }
+        });
+
+        return earningList
+    } catch (e){
+        return e
+    }
+
+}
+
 const compensationHistory = async (root, args, context, info) => {
     let comps = await dbClient.db(dbName).collection("compensations_history").aggregate([
         {
@@ -98,7 +170,7 @@ const saveCompensation = async (parent, args) => {
         if (args.data.compensationId) {
             //nothing to be done YET I believe
         } else {
-            await dbClient.db(dbName).collection('compensations').insertOne(compensation);
+            let comp = await dbClient.db(dbName).collection('compensations').insertOne(compensation);
             id = comp.insertedId.toString();
 
             //Save Compensation History
@@ -162,6 +234,20 @@ const compensateApprovedUpload = async (uploadId, oDate) => {
         const uploadIds = []
         uploadIds.push(uploadId)
         await notificationResolvers.helper.createSuccessfulUploadNotificationToMember(uploadIds, activeComp.payAmount)
+
+        let upload = await dbClient.db(dbName).collection('uploads').findOne({_id: new ObjectId(uploadId)});
+
+        await dbClient.db(dbName).collection('member_earnings').insertOne(
+            {
+                entityId: new ObjectId(uploadId),
+                type: 'upload',
+                amount: activeComp.payAmount,
+                memberId: upload.memberId,
+                payed: false,
+                createdAt: new Date(),
+                updatedAt: new Date()
+            }
+        );
     }
 }
 
@@ -189,6 +275,20 @@ const compensateApprovedProduct = async (uploadId, oDate) => {
         const uploadIds = []
         uploadIds.push(uploadId)
         await notificationResolvers.helper.createSuccessfulUploadNotificationToMember(uploadIds, activeComp.payAmount)
+
+        let upload = await dbClient.db(dbName).collection('uploads').findOne({_id: new ObjectId(uploadId)});
+
+        await dbClient.db(dbName).collection('member_earnings').insertOne(
+            {
+                entityId: new ObjectId(uploadId),
+                type: 'product',
+                amount: activeComp.payAmount,
+                memberId: new ObjectId(upload.memberId),
+                payed: false,
+                createdAt: new Date(),
+                updatedAt: new Date()
+            }
+        );
     }
 }
 
@@ -260,7 +360,8 @@ module.exports = {
         activeCompensation,
         compensationHistory,
         getMemberCompensations,
-        getMemberTotalEarnings
+        getMemberTotalEarnings,
+        getMembersCompensationAdminLedger
     },
     mutations: {
         saveCompensation,
