@@ -33,6 +33,7 @@ const typeDefs = gql`
         paymentMethod:String
         paymentUsername:String
         status: String
+        flagged: Boolean
     }
 
     type Follower {

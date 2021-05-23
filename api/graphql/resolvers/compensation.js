@@ -135,6 +135,35 @@ const getMembersCompensationAdminLedger = async (root, args, context, info) => {
 
 }
 
+const getCompensationAdminLedgerHistory = async (root, args, context, info) => {
+    try {
+        const memberId = new ObjectId(args.memberId);
+
+        const earnings = await dbClient.db(dbName).collection("member_earnings").aggregate([
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "memberId",
+                    foreignField: "_id",
+                    as: "members"
+                }
+            },
+            {
+                $addFields: {
+                    "member": { "$arrayElemAt": [ "$members", 0 ] },
+                }
+            },
+            { $match : { memberId: memberId } }
+        ]).toArray()
+
+        return earnings;
+    } catch (e){
+        return e
+    }
+
+}
+
+
 const compensationHistory = async (root, args, context, info) => {
     let comps = await dbClient.db(dbName).collection("compensations_history").aggregate([
         {
@@ -208,6 +237,39 @@ const compensateProducts = async (parent, args) => {
         return e;
     }
 }
+
+const flagCompensationEarning = async (parent, args) => {
+    const entityId = new ObjectId(args.entityId)
+    const type = args.type;
+    let object = null;
+
+    if ( type == 'member' ){
+        object = await dbClient.db(dbName).collection("users").findOne({ _id: entityId })
+        if ( object ){
+            let flagged = object.flagged ? !object.flagged : true;
+            await dbClient.db(dbName).collection("users").updateOne(
+                { _id: entityId },
+                { $set: { flagged: flagged }}
+            )
+        }
+    } else {
+        object = await dbClient.db(dbName).collection("member_earnings").findOne({ entityId: entityId, type: type })
+        if ( object ){
+            let flagged = object.flagged ? !object.flagged : true;
+            await dbClient.db(dbName).collection("member_earnings").updateOne(
+                { _id: new ObjectId(object._id)},
+                { $set: { flagged: flagged }}
+            )
+        }
+    }
+
+    try {
+        return 'ok'
+    } catch (e) {
+        return e;
+    }
+}
+
 
 /* HELPER */
 const compensateApprovedUpload = async (uploadId, oDate) => {
@@ -362,12 +424,14 @@ module.exports = {
         compensationHistory,
         getMemberCompensations,
         getMemberTotalEarnings,
-        getMembersCompensationAdminLedger
+        getMembersCompensationAdminLedger,
+        getCompensationAdminLedgerHistory
     },
     mutations: {
         saveCompensation,
         compensateUploads,
-        compensateProducts
+        compensateProducts,
+        flagCompensationEarning
     },
     helper: {
         availableUploadCompensation,
