@@ -15,6 +15,7 @@ const typeDefs = gql`
         isFollowing(userId1:ID, userId2: ID): Boolean
         getUserFeedbacks(id: ID): [CustomerFeedback]
         getUserCompletedAnswers(id: ID): [FeedbackAnswer]
+        getUserAnswer(id: ID): FeedbackAnswer
     }
 
     scalar Date
@@ -69,6 +70,7 @@ const typeDefs = gql`
         _id: ID
         customerFeedbackId: ID
         userId: ID
+        member: User
         answers: [FeedbackAnswers]
         feedbackOfferAnswers: [FeedbackAnswers]
         amount: Float

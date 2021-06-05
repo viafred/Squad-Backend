@@ -304,6 +304,67 @@ const getUserCompletedAnswers = async (root, args, context, info) => {
     return answers
 }
 
+const getUserAnswer = async (root, args, context, info) => {
+    let answers = await dbClient.db(dbName).collection("feedback_answers").aggregate([
+        {
+            "$lookup": {
+                "from": "customer_questions",
+                "localField": "answers.questionId",
+                "foreignField": "_id",
+                "as": "questions"
+            }
+        },
+        {
+            "$lookup": {
+                "from": "uploads",
+                "localField": "memberUploadId",
+                "foreignField": "_id",
+                "as": "uploads"
+            }
+        },
+        {
+            "$lookup": {
+                "from": "users",
+                "localField": "userId",
+                "foreignField": "_id",
+                "as": "users"
+            }
+        },
+        {
+            "$addFields": {
+                "answers": {
+                    "$map": {
+                        "input": "$answers",
+                        "as": "answerElement",
+                        "in": {
+                            "$mergeObjects": [
+                                "$$answerElement",
+                                {
+                                    "question": {
+                                        "$arrayElemAt": [
+                                            "$questions",
+                                            {
+                                                "$indexOfArray": [ "$questions._id", "$$answerElement.questionId" ]
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        { $project: { "questions": 0 } },
+        { $addFields: { "feedbackOfferAnswers": "$answers", "productURL": { "$arrayElemAt": [ "$uploads.productUrl", 0 ] }, member: { "$arrayElemAt": [ "$users", 0 ] }  } },
+        { $match : { "_id" : new ObjectId(args.id) } },
+        { $sort: { createdAt: -1 }}
+    ]).toArray();
+
+    console.log(answers[0])
+    return answers[0]
+}
+
 
 /* MUTATIONS */
 const updateUser = async (parent, args) => {
@@ -514,6 +575,7 @@ module.exports = {
         getSpotlightMembers,
         getUserFeedbacks,
         getUserCompletedAnswers,
+        getUserAnswer,
         getLookbook,
         getLookbookByUserId,
         getFollowers,
