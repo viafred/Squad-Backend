@@ -23,6 +23,7 @@ const typeDefs = gql`
         totalEarningsUpload: Float
         totalEarningsOffer: Float
         createdAt: Date
+        disbursed: Boolean
     }
     
     type MemberEarnings {
@@ -67,6 +68,7 @@ const typeDefs = gql`
       compensateUploads(id:String):String
       compensateProducts(id:String):String
       flagCompensationEarning(entityId: ID, type: String): String
+      disburseEarning(memberId: ID, month: Int, year: Int): String
     }
 `
 

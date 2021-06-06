@@ -1,6 +1,7 @@
 const {dbClient, dbName} = require('../../config/mongo');
 const ObjectId = require('mongodb').ObjectId;
 const moment = require('moment'); // require
+const _ = require('lodash');
 
 const uploadResolvers = require('../resolvers/uploadPhoto');
 const notificationResolvers = require('../resolvers/notification');
@@ -62,6 +63,33 @@ const getMemberTotalEarnings = async (root, args, context, info) => {
     return memberEarnings
 }
 
+const getDisbursedEarnings = async(args, userId) => {
+    try {
+        let disbursed = await dbClient.db(dbName).collection("member_earnings").aggregate([
+            {
+                $project:
+                    {
+                        amount: "$amount",
+                        memberId:"$memberId",
+                        member: "$member",
+                        payed: "$payed",
+                        entityId: "$entityId",
+                        type: "$type",
+                        createdAt: "$createdAt",
+                        totalUploadEarnings: "$totalUploadEarnings",
+                        year: { $year: "$createdAt" },
+                        month: { $month: "$createdAt" }
+                    }
+            },
+            { $match : { "month" : args.month, "year": args.year, payed: true, memberId: new ObjectId(userId) } },
+        ]).toArray()
+
+        return !_.isEmpty(disbursed)
+    } catch (e){
+        return e
+    }
+}
+
 const getMembersCompensationAdminLedger = async (root, args, context, info) => {
     try {
         let earnings = await dbClient.db(dbName).collection("member_earnings").aggregate([
@@ -110,6 +138,7 @@ const getMembersCompensationAdminLedger = async (root, args, context, info) => {
 
         let earningList = []
         earnings.forEach(earning => {
+            let disbursed = getDisbursedEarnings(args, earning._id.memberId.toString()).then(r => r);
             let earningItem = earningList.find(item => item.memberId == earning._id.memberId.toString());
             let totalEarningsType = 'totalEarnings'+ earning._id.type.charAt(0).toUpperCase() + earning._id.type.slice(1)
 
@@ -118,7 +147,8 @@ const getMembersCompensationAdminLedger = async (root, args, context, info) => {
                 let item = {
                     memberId: earning._id.memberId.toString(),
                     member: earning.data[0].member,
-                    createdAt: earning.data[0].createdAt
+                    createdAt: earning.data[0].createdAt,
+                    disbursed: disbursed
                 }
 
                 item[totalEarningsType] = earning.totalEarnings
@@ -128,6 +158,7 @@ const getMembersCompensationAdminLedger = async (root, args, context, info) => {
             }
         });
 
+        console.log(earningList)
         return earningList
     } catch (e){
         return e
@@ -238,36 +269,60 @@ const compensateProducts = async (parent, args) => {
     }
 }
 
-const flagCompensationEarning = async (parent, args) => {
-    const entityId = new ObjectId(args.entityId)
-    const type = args.type;
-    let object = null;
+const disburseEarning = async (parent, args) => {
 
-    if ( type == 'member' ){
-        object = await dbClient.db(dbName).collection("users").findOne({ _id: entityId })
-        if ( object ){
-            let flagged = object.flagged ? !object.flagged : true;
-            await dbClient.db(dbName).collection("users").updateOne(
-                { _id: entityId },
-                { $set: { flagged: flagged }}
-            )
+    let earnings = await dbClient.db(dbName).collection("member_earnings").aggregate([
+        {
+            $lookup: {
+                from: "users",
+                localField: "memberId",
+                foreignField: "_id",
+                as: "members"
+            }
+        },
+        {
+            $addFields: {
+                "member": { "$arrayElemAt": [ "$members", 0 ] },
+            }
+        },
+        {
+            $project:
+                {
+                    _id: "$_id",
+                    amount: "$amount",
+                    memberId:"$memberId",
+                    member: "$member",
+                    payed: "$payed",
+                    entityId: "$entityId",
+                    type: "$type",
+                    createdAt: "$createdAt",
+                    totalUploadEarnings: "$totalUploadEarnings",
+                    year: { $year: "$createdAt" },
+                    month: { $month: "$createdAt" }
+                }
+        },
+        { $match : { "month" : args.month, "year": args.year, memberId: new ObjectId(args.memberId)} },
+    ]).toArray()
+
+    let earningIds = earnings.map(e => new ObjectId(e._id) )
+
+    await dbClient.db(dbName).collection('member_earnings').updateMany(
+        { _id: { $in: earningIds } },
+        {
+            $set: { payed: true },
+            $currentDate: { updatedAt: true }
         }
-    } else {
-        object = await dbClient.db(dbName).collection("member_earnings").findOne({ entityId: entityId, type: type })
-        if ( object ){
-            let flagged = object.flagged ? !object.flagged : true;
-            await dbClient.db(dbName).collection("member_earnings").updateOne(
-                { _id: new ObjectId(object._id)},
-                { $set: { flagged: flagged }}
-            )
-        }
-    }
+    );
 
     try {
         return 'ok'
     } catch (e) {
         return e;
     }
+}
+
+const flagCompensationEarning = async (parent, args) => {
+
 }
 
 
@@ -431,7 +486,8 @@ module.exports = {
         saveCompensation,
         compensateUploads,
         compensateProducts,
-        flagCompensationEarning
+        flagCompensationEarning,
+        disburseEarning
     },
     helper: {
         availableUploadCompensation,
