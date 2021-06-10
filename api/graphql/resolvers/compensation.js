@@ -1,6 +1,7 @@
 const {dbClient, dbName} = require('../../config/mongo');
 const ObjectId = require('mongodb').ObjectId;
 const moment = require('moment'); // require
+const crypto = require('crypto');
 const _ = require('lodash');
 
 const uploadResolvers = require('../resolvers/uploadPhoto');
@@ -56,9 +57,10 @@ const getMemberCompensations = async (root, args, context, info) => {
 const getMemberTotalEarnings = async (root, args, context, info) => {
     let memberEarnings = {}
 
-    const uploads = await dbClient.db(dbName).collection("uploads").find({memberId: new ObjectId(args.memberId)}).toArray();
-    memberEarnings.uploads = uploads.map(u => u.earnedAmount ? u.earnedAmount : 0).reduce((previous, next) => parseFloat(previous) + parseFloat(next), 0)
-    memberEarnings.offers = uploads.map(u => u.offerEarnedAmount ? u.offerEarnedAmount : 0).reduce((previous, next) => parseFloat(previous) + parseFloat(next), 0)
+    const uploadEarnings = await dbClient.db(dbName).collection("member_earnings").find({memberId: new ObjectId(args.memberId), type: "upload"}).toArray();
+    const offerEarnings = await dbClient.db(dbName).collection("member_earnings").find({memberId: new ObjectId(args.memberId), type: "offer"}).toArray();
+    memberEarnings.uploads = uploadEarnings.map(u => u.amount ? u.amount : 0).reduce((previous, next) => parseFloat(previous) + parseFloat(next), 0)
+    memberEarnings.offers = offerEarnings.map(u => u.amount ? u.amount : 0).reduce((previous, next) => parseFloat(previous) + parseFloat(next), 0)
 
     return memberEarnings
 }
@@ -166,6 +168,35 @@ const getMembersCompensationAdminLedger = async (root, args, context, info) => {
 
 }
 
+const getDisburedEarnings = async (root, args, context, info) => {
+    try {
+        const memberId = new ObjectId(args.memberId);
+
+        const earnings = await dbClient.db(dbName).collection("member_earnings").aggregate([
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "memberId",
+                    foreignField: "_id",
+                    as: "members"
+                }
+            },
+            {
+                $addFields: {
+                    "member": { "$arrayElemAt": [ "$members", 0 ] },
+                }
+            },
+            { $match : { memberId: memberId, payed: true } }
+        ]).toArray()
+
+        return earnings;
+    } catch (e){
+        return e
+    }
+
+}
+
+
 const getCompensationAdminLedgerHistory = async (root, args, context, info) => {
     try {
         const memberId = new ObjectId(args.memberId);
@@ -270,7 +301,6 @@ const compensateProducts = async (parent, args) => {
 }
 
 const disburseEarning = async (parent, args) => {
-
     let earnings = await dbClient.db(dbName).collection("member_earnings").aggregate([
         {
             $lookup: {
@@ -301,18 +331,23 @@ const disburseEarning = async (parent, args) => {
                     month: { $month: "$createdAt" }
                 }
         },
-        { $match : { "month" : args.month, "year": args.year, memberId: new ObjectId(args.memberId)} },
+        { $match : { "month" : args.month, "year": args.year, memberId: new ObjectId(args.memberId), $or: [{ flagged: false }, { flagged : { "$exists": false } }] } }
     ]).toArray()
 
     let earningIds = earnings.map(e => new ObjectId(e._id) )
 
-    await dbClient.db(dbName).collection('member_earnings').updateMany(
-        { _id: { $in: earningIds } },
-        {
-            $set: { payed: true },
-            $currentDate: { updatedAt: true }
-        }
-    );
+    earningIds.map(async (id) => {
+
+        //This probably changes when We make the payments inside the system with the Venmo ID or something
+        let paymentNumber = crypto.createHash('md5').update(id.toString()).digest("hex")
+        await dbClient.db(dbName).collection('member_earnings').update(
+            { _id: id },
+            {
+                $set: { payed: true, paymentDate: new Date(), paymentNumber: paymentNumber },
+                $currentDate: { updatedAt: true }
+            }
+        );
+    })
 
     try {
         return 'ok'
@@ -322,7 +357,35 @@ const disburseEarning = async (parent, args) => {
 }
 
 const flagCompensationEarning = async (parent, args) => {
+    const entityId = new ObjectId(args.entityId)
+    const type = args.type;
+    let object = null;
 
+    if ( type == 'member' ){
+        object = await dbClient.db(dbName).collection("users").findOne({ _id: entityId })
+        if ( object ){
+            let flagged = object.flagged ? !object.flagged : true;
+            await dbClient.db(dbName).collection("users").updateOne(
+                { _id: entityId },
+                { $set: { flagged: flagged }}
+            )
+        }
+    } else {
+        object = await dbClient.db(dbName).collection("member_earnings").findOne({ entityId: entityId, type: type })
+        if ( object ){
+            let flagged = object.flagged ? !object.flagged : true;
+            await dbClient.db(dbName).collection("member_earnings").updateOne(
+                { _id: new ObjectId(object._id)},
+                { $set: { flagged: flagged }}
+            )
+        }
+    }
+
+    try {
+        return 'ok'
+    } catch (e) {
+        return e;
+    }
 }
 
 
@@ -480,7 +543,8 @@ module.exports = {
         getMemberCompensations,
         getMemberTotalEarnings,
         getMembersCompensationAdminLedger,
-        getCompensationAdminLedgerHistory
+        getCompensationAdminLedgerHistory,
+        getDisburedEarnings
     },
     mutations: {
         saveCompensation,

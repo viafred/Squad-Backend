@@ -10,6 +10,7 @@ const typeDefs = gql`
       getMemberTotalEarnings(memberId: String): TotalEarning
       getMembersCompensationAdminLedger(month:Int, year:Int): [MemberEarningList]
       getCompensationAdminLedgerHistory(memberId:ID): [MemberEarnings]
+      getDisburedEarnings(memberId:ID): [MemberEarnings]
     }
 
     type TotalEarning {
@@ -35,6 +36,8 @@ const typeDefs = gql`
         type: String
         entityId: ID
         createdAt: Date
+        paymentDate: Date
+        paymentNumber: String
         flagged: Boolean
     }
 
