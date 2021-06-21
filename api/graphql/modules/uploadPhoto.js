@@ -53,6 +53,7 @@ const typeDefs = gql`
         categoryName: String
         tags: [String]
         earnedAmount: Float
+        earning: MemberEarnings
     }
 
     input UploadPhotoInput {

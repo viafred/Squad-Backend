@@ -232,11 +232,20 @@ const getUserUploads =  async (root, args, context, info) => {
             }
         },
         {
+            $lookup:{
+                from: "member_earnings",
+                localField : "_id",
+                foreignField : "entityId",
+                as : "memberEarnings"
+            }
+        },
+        {
             $addFields: {
                 "brand": { "$arrayElemAt": [ "$brands", 0 ] },
                 "category": { "$arrayElemAt": [ "$categories", 0 ] },
                 "product": { "$arrayElemAt": [ "$products", 0 ] },
                 "member": { "$arrayElemAt": [ "$members", 0 ] },
+                "earning": { "$arrayElemAt": [ "$memberEarnings", 0 ] },
             }
         },
         { $match : { memberId : new ObjectId(args.userId) } }
